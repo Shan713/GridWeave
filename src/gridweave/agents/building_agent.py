@@ -197,7 +197,7 @@ class BuildingAgent(BaseAgent):
     # ===================================================== 2. forecast_demand
     def forecast_demand(self, horizon: int | None = None) -> Forecast:
         self._require_history()
-        horizon = horizon or self.spec.forecast_horizon
+        horizon = self.spec.forecast_horizon if horizon is None else horizon
         self._last_forecast = self.forecaster.forecast(list(self._history), horizon, self.resolution_minutes)
         return self._last_forecast
 

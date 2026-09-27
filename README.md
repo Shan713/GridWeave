@@ -142,7 +142,7 @@ wire format, the `Allocation` reply, and the P1/P2 boundary. Real sample bids an
 ## 9. Testing
 
 ```bash
-pytest                                   # 219 tests: unit + integration + doc examples
+pytest                                   # 220 tests: unit + integration + doc examples
 pytest --cov=gridweave                   # coverage
 ruff check src tests scripts examples    # lint
 ```

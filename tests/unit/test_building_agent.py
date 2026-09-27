@@ -187,3 +187,10 @@ def test_snapshot_is_json_serialisable(agent):
     assert snap["phase"] == "settled" and snap["last_outcome"]["status"] == "partial"
     assert snap["stats"]["slots_settled"] == 1
     assert [e.kind for e in agent.events] == ["observe"] * 4 + ["bid", "allocation"]
+
+
+def test_explicit_zero_horizon_is_rejected_not_defaulted(agent):
+    feed(agent, [40.0] * 4)
+    assert agent.forecast_demand().horizon == agent.spec.forecast_horizon
+    with pytest.raises(ValidationError):
+        agent.forecast_demand(0)
