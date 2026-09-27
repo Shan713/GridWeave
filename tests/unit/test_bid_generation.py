@@ -32,7 +32,7 @@ def state_for(spec, forecast_kw, backlog_kw=0.0):
 def make_bid(spec, forecast_kw, backlog_kw=0.0, scarcity=0.0, deprivation=0.0, revision=0):
     state = state_for(spec, forecast_kw, backlog_kw)
     model = PriorityModel()
-    priority = model.score(model.factors(state.critical_demand_kw, state.desired_demand_kw, spec.importance,
+    priority = model.score(model.factors(state.critical_demand_kw, min(forecast_kw, state.desired_demand_kw), spec.importance,
                                          backlog_kw, spec.backlog_limit_kw, deprivation))
     return BidGenerator().generate(spec, state, priority, BidContext(SLOT, scarcity=scarcity), NOW,
                                    deprivation=deprivation, revision=revision)
@@ -60,7 +60,7 @@ class TestPriority:
         assert m.score(PriorityFactors(1, 1, 1, 1)).score == pytest.approx(1)
 
     def test_factors_are_clamped_and_handle_zero_request(self):
-        f = PriorityModel.factors(critical_kw=0, requested_kw=0, importance=0.5, backlog_kw=500,
+        f = PriorityModel.factors(critical_kw=0, base_demand_kw=0, importance=0.5, backlog_kw=500,
                                   backlog_limit_kw=100, deprivation=0.2)
         assert f.criticality == 0 and f.urgency == 1.0
 

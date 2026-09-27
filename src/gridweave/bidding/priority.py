@@ -9,7 +9,9 @@ it; the score is advisory input, not an allocation.
 
 Factors:
 
-* ``criticality`` — share of the requested power that is critical load.
+* ``criticality`` — share of the slot's own demand that is critical load
+  (deferred backlog is excluded so that postponing load never makes a
+  building look *less* critical).
 * ``importance`` — static importance of the building (config; e.g. labs
   with running experiments rank above admin offices).
 * ``urgency`` — deferred-demand pressure: ``backlog / backlog_limit``.
@@ -75,13 +77,13 @@ class PriorityModel:
     @staticmethod
     def factors(
         critical_kw: float,
-        requested_kw: float,
+        base_demand_kw: float,
         importance: float,
         backlog_kw: float,
         backlog_limit_kw: float,
         deprivation: float,
     ) -> PriorityFactors:
-        criticality = critical_kw / requested_kw if requested_kw > 0 else 0.0
+        criticality = critical_kw / base_demand_kw if base_demand_kw > 0 else 0.0
         urgency = backlog_kw / backlog_limit_kw if backlog_limit_kw > 0 else 0.0
         return PriorityFactors(
             criticality=clamp(criticality),
