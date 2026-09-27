@@ -6,6 +6,7 @@ from gridweave.forecasting.base_forecaster import (
     ForecastPoint,
     InsufficientHistoryError,
 )
+from gridweave.forecasting.composite import FallbackForecaster
 from gridweave.forecasting.evaluation import BacktestResult, backtest, compare_forecasters
 from gridweave.forecasting.ewma import EWMAForecaster, EWMAPredictor
 from gridweave.forecasting.metrics import bias, mae, mape, rmse
@@ -19,6 +20,7 @@ __all__ = [
     "EWMAForecaster",
     "EWMAPredictor",
     "FORECASTERS",
+    "FallbackForecaster",
     "Forecast",
     "ForecastPoint",
     "InsufficientHistoryError",

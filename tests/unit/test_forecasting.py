@@ -204,3 +204,13 @@ def test_spike_detector():
     assert not d.is_anomaly(history, 52)
     assert not d.is_anomaly([50, 50], 500)  # too little history to judge
     assert not d.is_anomaly([0.0] * 8, 0.5)  # flat history + tiny wobble
+
+
+def test_fallback_forecaster_switches_when_history_suffices():
+    from gridweave.forecasting import FallbackForecaster
+
+    f = FallbackForecaster(SeasonalNaiveForecaster(4), EWMAForecaster(1.0))
+    assert f.forecast(series([1, 2, 3]), 1).method == "ewma"
+    fc = f.forecast(series([1, 2, 3, 4, 5]), 1)
+    assert fc.method == "seasonal_naive" and fc.values == [2]
+    assert f.min_history == 1
