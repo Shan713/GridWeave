@@ -10,7 +10,7 @@
     "method": "seasonal_ewma",
     "params": {"season_length": 96, "alpha": 0.3, "beta": 0.8},
     "fallback_method": "ewma",
-    "fallback_params": {"alpha": 0.5}
+    "fallback_params": {"alpha": 0.6}
   },
   "agent": {
     "priority_weights": {"criticality": 0.35, "importance": 0.25, "urgency": 0.20, "deprivation": 0.20},

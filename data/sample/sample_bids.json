@@ -1,0 +1,322 @@
+[
+  {
+    "schema_version": "1.0",
+    "bid_id": "hostel_a:20260105T2000:r0",
+    "building_id": "hostel_a",
+    "time_slot": {
+      "start": "2026-01-05T20:00:00",
+      "duration_minutes": 15
+    },
+    "created_at": "2026-01-05T19:45:00",
+    "requested_power_kw": 101.79954291433106,
+    "minimum_power_kw": 42.24681030944739,
+    "critical_power_kw": 35.62984002001587,
+    "flexible_power_kw": 66.16970289431518,
+    "priority_score": 0.2725,
+    "flexibility_score": 0.585,
+    "willingness_to_pay": 6.68125,
+    "maximum_price": 11.0,
+    "revision": 0,
+    "explanation": {
+      "priority": {
+        "score": 0.2725,
+        "factors": {
+          "criticality": 0.35,
+          "importance": 0.6,
+          "urgency": 0.0,
+          "deprivation": 0.0
+        },
+        "weights": {
+          "criticality": 0.35,
+          "importance": 0.25,
+          "urgency": 0.2,
+          "deprivation": 0.2
+        },
+        "contributions": {
+          "criticality": 0.12249999999999998,
+          "importance": 0.15,
+          "urgency": 0.0,
+          "deprivation": 0.0
+        }
+      },
+      "pricing": {
+        "base_price": 6.0,
+        "max_price": 11.0,
+        "scarcity": 0.0,
+        "deprivation": 0.0,
+        "pressure": 0.13625
+      },
+      "demand": {
+        "timestamp": "2026-01-05T20:00:00",
+        "current_demand_kw": 103.4551,
+        "predicted_demand_kw": 101.79954291433106,
+        "backlog_kw": 0.0,
+        "desired_demand_kw": 101.79954291433106,
+        "critical_demand_kw": 35.62984002001587,
+        "flexible_demand_kw": 66.16970289431518,
+        "minimum_demand_kw": 42.24681030944739,
+        "maximum_demand_kw": 120.0
+      },
+      "forecast": {
+        "method": "ewma",
+        "confidence": 0.835525
+      }
+    }
+  },
+  {
+    "schema_version": "1.0",
+    "bid_id": "hostel_b:20260105T2000:r0",
+    "building_id": "hostel_b",
+    "time_slot": {
+      "start": "2026-01-05T20:00:00",
+      "duration_minutes": 15
+    },
+    "created_at": "2026-01-05T19:45:00",
+    "requested_power_kw": 79.31525099409033,
+    "minimum_power_kw": 32.91582916254749,
+    "critical_power_kw": 27.760337847931616,
+    "flexible_power_kw": 51.55491314615872,
+    "priority_score": 0.2725,
+    "flexibility_score": 0.585,
+    "willingness_to_pay": 6.68125,
+    "maximum_price": 11.0,
+    "revision": 0,
+    "explanation": {
+      "priority": {
+        "score": 0.2725,
+        "factors": {
+          "criticality": 0.35,
+          "importance": 0.6,
+          "urgency": 0.0,
+          "deprivation": 0.0
+        },
+        "weights": {
+          "criticality": 0.35,
+          "importance": 0.25,
+          "urgency": 0.2,
+          "deprivation": 0.2
+        },
+        "contributions": {
+          "criticality": 0.12249999999999998,
+          "importance": 0.15,
+          "urgency": 0.0,
+          "deprivation": 0.0
+        }
+      },
+      "pricing": {
+        "base_price": 6.0,
+        "max_price": 11.0,
+        "scarcity": 0.0,
+        "deprivation": 0.0,
+        "pressure": 0.13625
+      },
+      "demand": {
+        "timestamp": "2026-01-05T20:00:00",
+        "current_demand_kw": 80.9499,
+        "predicted_demand_kw": 79.31525099409033,
+        "backlog_kw": 0.0,
+        "desired_demand_kw": 79.31525099409033,
+        "critical_demand_kw": 27.760337847931616,
+        "flexible_demand_kw": 51.55491314615872,
+        "minimum_demand_kw": 32.91582916254749,
+        "maximum_demand_kw": 100.0
+      },
+      "forecast": {
+        "method": "ewma",
+        "confidence": 0.856949
+      }
+    }
+  },
+  {
+    "schema_version": "1.0",
+    "bid_id": "hostel_c:20260105T2000:r0",
+    "building_id": "hostel_c",
+    "time_slot": {
+      "start": "2026-01-05T20:00:00",
+      "duration_minutes": 15
+    },
+    "created_at": "2026-01-05T19:45:00",
+    "requested_power_kw": 111.51047439932736,
+    "minimum_power_kw": 46.27684687572085,
+    "critical_power_kw": 39.02866603976457,
+    "flexible_power_kw": 72.48180835956279,
+    "priority_score": 0.2725,
+    "flexibility_score": 0.5850000000000001,
+    "willingness_to_pay": 6.68125,
+    "maximum_price": 11.0,
+    "revision": 0,
+    "explanation": {
+      "priority": {
+        "score": 0.2725,
+        "factors": {
+          "criticality": 0.35,
+          "importance": 0.6,
+          "urgency": 0.0,
+          "deprivation": 0.0
+        },
+        "weights": {
+          "criticality": 0.35,
+          "importance": 0.25,
+          "urgency": 0.2,
+          "deprivation": 0.2
+        },
+        "contributions": {
+          "criticality": 0.12249999999999998,
+          "importance": 0.15,
+          "urgency": 0.0,
+          "deprivation": 0.0
+        }
+      },
+      "pricing": {
+        "base_price": 6.0,
+        "max_price": 11.0,
+        "scarcity": 0.0,
+        "deprivation": 0.0,
+        "pressure": 0.13625
+      },
+      "demand": {
+        "timestamp": "2026-01-05T20:00:00",
+        "current_demand_kw": 111.298,
+        "predicted_demand_kw": 111.51047439932736,
+        "backlog_kw": 0.0,
+        "desired_demand_kw": 111.51047439932736,
+        "critical_demand_kw": 39.02866603976457,
+        "flexible_demand_kw": 72.48180835956279,
+        "minimum_demand_kw": 46.27684687572085,
+        "maximum_demand_kw": 140.0
+      },
+      "forecast": {
+        "method": "ewma",
+        "confidence": 0.802075
+      }
+    }
+  },
+  {
+    "schema_version": "1.0",
+    "bid_id": "eng_lab:20260105T2000:r0",
+    "building_id": "eng_lab",
+    "time_slot": {
+      "start": "2026-01-05T20:00:00",
+      "duration_minutes": 15
+    },
+    "created_at": "2026-01-05T19:45:00",
+    "requested_power_kw": 79.36731700995506,
+    "minimum_power_kw": 60.31916092756585,
+    "critical_power_kw": 55.55712190696854,
+    "flexible_power_kw": 23.81019510298652,
+    "priority_score": 0.47,
+    "flexibility_score": 0.24,
+    "willingness_to_pay": 8.645,
+    "maximum_price": 14.0,
+    "revision": 0,
+    "explanation": {
+      "priority": {
+        "score": 0.47,
+        "factors": {
+          "criticality": 0.7,
+          "importance": 0.9,
+          "urgency": 0.0,
+          "deprivation": 0.0
+        },
+        "weights": {
+          "criticality": 0.35,
+          "importance": 0.25,
+          "urgency": 0.2,
+          "deprivation": 0.2
+        },
+        "contributions": {
+          "criticality": 0.24499999999999997,
+          "importance": 0.225,
+          "urgency": 0.0,
+          "deprivation": 0.0
+        }
+      },
+      "pricing": {
+        "base_price": 7.0,
+        "max_price": 14.0,
+        "scarcity": 0.0,
+        "deprivation": 0.0,
+        "pressure": 0.235
+      },
+      "demand": {
+        "timestamp": "2026-01-05T20:00:00",
+        "current_demand_kw": 77.8012,
+        "predicted_demand_kw": 79.36731700995506,
+        "backlog_kw": 0.0,
+        "desired_demand_kw": 79.36731700995506,
+        "critical_demand_kw": 55.55712190696854,
+        "flexible_demand_kw": 23.81019510298652,
+        "minimum_demand_kw": 60.31916092756585,
+        "maximum_demand_kw": 150.0
+      },
+      "forecast": {
+        "method": "ewma",
+        "confidence": 0.894809
+      }
+    }
+  },
+  {
+    "schema_version": "1.0",
+    "bid_id": "academic_block:20260105T2000:r0",
+    "building_id": "academic_block",
+    "time_slot": {
+      "start": "2026-01-05T20:00:00",
+      "duration_minutes": 15
+    },
+    "created_at": "2026-01-05T19:45:00",
+    "requested_power_kw": 12.67442061213719,
+    "minimum_power_kw": 9.402326183641158,
+    "critical_power_kw": 8.0,
+    "flexible_power_kw": 4.67442061213719,
+    "priority_score": 0.395917,
+    "flexibility_score": 0.25816520759636397,
+    "willingness_to_pay": 7.588772,
+    "maximum_price": 12.0,
+    "revision": 0,
+    "explanation": {
+      "priority": {
+        "score": 0.395917,
+        "factors": {
+          "criticality": 0.6311925605766228,
+          "importance": 0.7,
+          "urgency": 0.0,
+          "deprivation": 0.0
+        },
+        "weights": {
+          "criticality": 0.35,
+          "importance": 0.25,
+          "urgency": 0.2,
+          "deprivation": 0.2
+        },
+        "contributions": {
+          "criticality": 0.22091739620181794,
+          "importance": 0.175,
+          "urgency": 0.0,
+          "deprivation": 0.0
+        }
+      },
+      "pricing": {
+        "base_price": 6.5,
+        "max_price": 12.0,
+        "scarcity": 0.0,
+        "deprivation": 0.0,
+        "pressure": 0.1979585
+      },
+      "demand": {
+        "timestamp": "2026-01-05T20:00:00",
+        "current_demand_kw": 11.0637,
+        "predicted_demand_kw": 12.67442061213719,
+        "backlog_kw": 0.0,
+        "desired_demand_kw": 12.67442061213719,
+        "critical_demand_kw": 8.0,
+        "flexible_demand_kw": 4.67442061213719,
+        "minimum_demand_kw": 9.402326183641158,
+        "maximum_demand_kw": 180.0
+      },
+      "forecast": {
+        "method": "ewma",
+        "confidence": 0.689448
+      }
+    }
+  }
+]

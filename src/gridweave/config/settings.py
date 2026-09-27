@@ -47,7 +47,7 @@ class ForecastSettings:
     method: str = "seasonal_ewma"
     params: Mapping[str, Any] = field(default_factory=dict)
     fallback_method: str | None = "ewma"
-    fallback_params: Mapping[str, Any] = field(default_factory=lambda: {"alpha": 0.5})
+    fallback_params: Mapping[str, Any] = field(default_factory=lambda: {"alpha": 0.6})
 
 
 @dataclass(frozen=True)

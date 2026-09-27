@@ -1,0 +1,72 @@
+[
+  {
+    "bid_id": "academic_block:20260105T2000:r0",
+    "building_id": "academic_block",
+    "time_slot": {
+      "start": "2026-01-05T20:00:00",
+      "duration_minutes": 15
+    },
+    "allocated_power_kw": 12.67442061213719,
+    "clearing_price": 7.588772,
+    "supply_mix": {},
+    "metadata": {
+      "mechanism": "mock_tiered_pay_as_bid"
+    }
+  },
+  {
+    "bid_id": "eng_lab:20260105T2000:r0",
+    "building_id": "eng_lab",
+    "time_slot": {
+      "start": "2026-01-05T20:00:00",
+      "duration_minutes": 15
+    },
+    "allocated_power_kw": 79.36731700995506,
+    "clearing_price": 8.645,
+    "supply_mix": {},
+    "metadata": {
+      "mechanism": "mock_tiered_pay_as_bid"
+    }
+  },
+  {
+    "bid_id": "hostel_a:20260105T2000:r0",
+    "building_id": "hostel_a",
+    "time_slot": {
+      "start": "2026-01-05T20:00:00",
+      "duration_minutes": 15
+    },
+    "allocated_power_kw": 101.79954291433106,
+    "clearing_price": 6.68125,
+    "supply_mix": {},
+    "metadata": {
+      "mechanism": "mock_tiered_pay_as_bid"
+    }
+  },
+  {
+    "bid_id": "hostel_b:20260105T2000:r0",
+    "building_id": "hostel_b",
+    "time_slot": {
+      "start": "2026-01-05T20:00:00",
+      "duration_minutes": 15
+    },
+    "allocated_power_kw": 79.31525099409033,
+    "clearing_price": 6.68125,
+    "supply_mix": {},
+    "metadata": {
+      "mechanism": "mock_tiered_pay_as_bid"
+    }
+  },
+  {
+    "bid_id": "hostel_c:20260105T2000:r0",
+    "building_id": "hostel_c",
+    "time_slot": {
+      "start": "2026-01-05T20:00:00",
+      "duration_minutes": 15
+    },
+    "allocated_power_kw": 62.84346846948635,
+    "clearing_price": 6.68125,
+    "supply_mix": {},
+    "metadata": {
+      "mechanism": "mock_tiered_pay_as_bid"
+    }
+  }
+]
