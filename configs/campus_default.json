@@ -43,7 +43,7 @@
      "capacity_kw": 180, "minimum_operational_kw": 8}
   ],
   "supply": {
-    "mock_grid_capacity_kw": 330,
-    "shortage_windows": [[19.0, 22.0, 0.75]]
+    "mock_grid_capacity_kw": 420,
+    "shortage_windows": [[19.0, 22.0, 0.8]]
   }
 }
