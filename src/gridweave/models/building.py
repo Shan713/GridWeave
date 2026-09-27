@@ -79,7 +79,8 @@ class BuildingSpec:
         require_fraction("min_flexible_fraction", self.min_flexible_fraction)
         require_fraction("deferrable_fraction", self.deferrable_fraction)
         require_fraction("importance", self.importance)
-        if isinstance(self.forecast_horizon, bool) or not isinstance(self.forecast_horizon, int) or self.forecast_horizon < 1:
+        horizon = self.forecast_horizon
+        if isinstance(horizon, bool) or not isinstance(horizon, int) or horizon < 1:
             raise ValidationError(f"forecast_horizon must be an int >= 1, got {self.forecast_horizon!r}")
         require_non_negative("base_price_per_kwh", self.base_price_per_kwh)
         require_positive("max_price_per_kwh", self.max_price_per_kwh)

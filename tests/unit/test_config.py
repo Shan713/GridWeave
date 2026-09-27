@@ -6,9 +6,8 @@ import json
 import pytest
 
 from gridweave.agents import BuildingAgent
-from gridweave.config import campus_from_dict, load_campus_config, parse_building, synthetic_campus
+from gridweave.config import ForecastSettings, campus_from_dict, load_campus_config, parse_building, synthetic_campus
 from gridweave.factory import build_agents, build_forecaster, build_simulators
-from gridweave.config import ForecastSettings
 from gridweave.forecasting import EWMAForecaster, FallbackForecaster
 from gridweave.models import BuildingType
 from gridweave.utils.validation import ValidationError

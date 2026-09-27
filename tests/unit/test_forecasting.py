@@ -105,7 +105,8 @@ def test_ewma_hand_computed():
 
 def test_ewma_tracks_changing_demand_faster_than_long_moving_average():
     history = series([20.0] * 20 + [60.0] * 4)  # step change
-    assert EWMAForecaster(0.6).forecast(history, 1).values[0] > MovingAverageForecaster(16).forecast(history, 1).values[0]
+    ewma = EWMAForecaster(0.6).forecast(history, 1).values[0]
+    assert ewma > MovingAverageForecaster(16).forecast(history, 1).values[0]
 
 
 def test_seasonal_naive_repeats_last_season():

@@ -24,7 +24,8 @@ def main() -> None:
     parser.add_argument("--config", help="campus config JSON (default: configs/campus_default.json)")
     parser.add_argument("--buildings", type=int, help="use a synthetic campus with N buildings instead")
     parser.add_argument("--steps", type=int, help="number of 15-min market cycles (default: whole horizon)")
-    parser.add_argument("--supply-kw", type=float, help="mock grid capacity (default: from config, else 55%% of capacity)")
+    parser.add_argument("--supply-kw", type=float,
+                        help="mock grid capacity (default: from config, else 55%% of capacity)")
     parser.add_argument("--seed", type=int)
     parser.add_argument("--output", help="write per-step records + summary as JSON")
     parser.add_argument("--log-level", default=None)

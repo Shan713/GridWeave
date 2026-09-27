@@ -15,11 +15,11 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Any, Mapping
 
-from gridweave.bidding.bid_generator import BidContext
 from gridweave.interfaces import Auctioneer, DemandAgent, EnvironmentStream, SupplyProvider
 from gridweave.models.allocation import Allocation, AllocationOutcome
 from gridweave.models.bid import Bid
 from gridweave.models.common import TimeSlot
+from gridweave.models.context import BidContext
 from gridweave.utils.logging import get_logger
 from gridweave.utils.validation import ValidationError, clamp
 

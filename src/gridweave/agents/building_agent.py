@@ -24,7 +24,7 @@ from typing import Any
 
 from gridweave.agents.allocation_response import respond_to_allocation
 from gridweave.agents.base_agent import BaseAgent
-from gridweave.bidding.bid_generator import BidContext, BidGenerator
+from gridweave.bidding.bid_generator import BidGenerator
 from gridweave.bidding.priority import PriorityBreakdown, PriorityModel
 from gridweave.classification.load_classifier import LoadClassifier
 from gridweave.forecasting.anomaly import SpikeDetector
@@ -34,6 +34,7 @@ from gridweave.models.allocation import Allocation, AllocationOutcome
 from gridweave.models.bid import Bid
 from gridweave.models.building import BuildingSpec
 from gridweave.models.common import DEFAULT_RESOLUTION_MINUTES, TimeSlot
+from gridweave.models.context import BidContext
 from gridweave.models.demand import DemandSample, DemandState, LoadClassification, Observation
 from gridweave.utils.validation import ValidationError, require_fraction
 

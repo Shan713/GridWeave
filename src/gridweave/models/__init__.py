@@ -3,6 +3,7 @@ from gridweave.models.allocation import Allocation, AllocationOutcome, Allocatio
 from gridweave.models.bid import BID_SCHEMA_VERSION, Bid
 from gridweave.models.building import BuildingSpec, BuildingType
 from gridweave.models.common import DEFAULT_RESOLUTION_MINUTES, TimeSlot
+from gridweave.models.context import BidContext
 from gridweave.models.demand import DemandSample, DemandState, LoadClassification, Observation
 
 __all__ = [
@@ -11,6 +12,7 @@ __all__ = [
     "AllocationStatus",
     "BID_SCHEMA_VERSION",
     "Bid",
+    "BidContext",
     "BuildingSpec",
     "BuildingType",
     "DEFAULT_RESOLUTION_MINUTES",

@@ -29,7 +29,9 @@ def hourly_mean(samples, hour_from, hour_to):
 
 
 def test_same_seed_same_series_different_seed_different_series():
-    gen = lambda seed: DemandGenerator(get_profile("hostel"), 100, seed=seed).generate(MONDAY, 96)
+    def gen(seed):
+        return DemandGenerator(get_profile("hostel"), 100, seed=seed).generate(MONDAY, 96)
+
     assert gen(7) == gen(7)
     assert gen(7) != gen(8)
 

@@ -9,10 +9,10 @@ import pytest
 from gridweave.bidding import (
     BidContext,
     BidGenerator,
+    PricingPolicy,
     PriorityFactors,
     PriorityModel,
     PriorityWeights,
-    PricingPolicy,
     make_bid_id,
 )
 from gridweave.classification import LoadClassifier
@@ -32,7 +32,8 @@ def state_for(spec, forecast_kw, backlog_kw=0.0):
 def make_bid(spec, forecast_kw, backlog_kw=0.0, scarcity=0.0, deprivation=0.0, revision=0):
     state = state_for(spec, forecast_kw, backlog_kw)
     model = PriorityModel()
-    priority = model.score(model.factors(state.critical_demand_kw, min(forecast_kw, state.desired_demand_kw), spec.importance,
+    base_kw = min(forecast_kw, state.desired_demand_kw)
+    priority = model.score(model.factors(state.critical_demand_kw, base_kw, spec.importance,
                                          backlog_kw, spec.backlog_limit_kw, deprivation))
     return BidGenerator().generate(spec, state, priority, BidContext(SLOT, scarcity=scarcity), NOW,
                                    deprivation=deprivation, revision=revision)

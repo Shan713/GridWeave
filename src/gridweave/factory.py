@@ -20,7 +20,8 @@ from gridweave.simulation.demand_generator import DemandGenerator, derive_seed
 def build_forecaster(settings: ForecastSettings) -> BaseForecaster:
     primary = create_forecaster(settings.method, **dict(settings.params))
     if settings.fallback_method:
-        return FallbackForecaster(primary, create_forecaster(settings.fallback_method, **dict(settings.fallback_params)))
+        fallback = create_forecaster(settings.fallback_method, **dict(settings.fallback_params))
+        return FallbackForecaster(primary, fallback)
     return primary
 
 

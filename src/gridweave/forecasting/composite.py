@@ -24,7 +24,9 @@ class FallbackForecaster(BaseForecaster):
     def min_history(self) -> int:
         return min(self.primary.min_history, self.fallback.min_history)
 
-    def forecast(self, history: Sequence[DemandSample], horizon: int, resolution_minutes: int | None = None) -> Forecast:
+    def forecast(
+        self, history: Sequence[DemandSample], horizon: int, resolution_minutes: int | None = None
+    ) -> Forecast:
         model = self.primary if len(history) >= self.primary.min_history else self.fallback
         return model.forecast(history, horizon, resolution_minutes)
 

@@ -14,10 +14,10 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Protocol, Sequence, runtime_checkable
 
-from gridweave.bidding.bid_generator import BidContext
 from gridweave.models.allocation import Allocation, AllocationOutcome
 from gridweave.models.bid import Bid
 from gridweave.models.common import TimeSlot
+from gridweave.models.context import BidContext
 from gridweave.models.demand import Observation
 
 

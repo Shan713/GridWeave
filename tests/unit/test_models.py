@@ -51,7 +51,9 @@ class TestBuildingSpec:
         with pytest.raises(ValidationError):
             BuildingSpec("x", "X", BuildingType.LAB, capacity_kw=10, minimum_operational_kw=11)
 
-    @pytest.mark.parametrize("field", ["importance", "critical_fraction", "deferrable_fraction", "min_flexible_fraction"])
+    @pytest.mark.parametrize(
+        "field", ["importance", "critical_fraction", "deferrable_fraction", "min_flexible_fraction"]
+    )
     @pytest.mark.parametrize("value", [-0.1, 1.1])
     def test_fractions_must_be_in_unit_interval(self, field, value):
         with pytest.raises(ValidationError):

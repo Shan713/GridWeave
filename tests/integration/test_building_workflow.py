@@ -65,8 +65,10 @@ def test_extreme_shortage_reports_critical_shortfalls_without_crashing():
     for r in coord.records:
         assert_step_invariants(r)
     # sustained deprivation pushes priority up over time
-    first, last = coord.records[0].bids["hostel_a"], coord.records[-1].bids["hostel_a"]
-    assert last.explanation["priority"]["factors"]["deprivation"] > first.explanation["priority"]["factors"]["deprivation"]
+    def deprivation(record):
+        return record.bids["hostel_a"].explanation["priority"]["factors"]["deprivation"]
+
+    assert deprivation(coord.records[-1]) > deprivation(coord.records[0])
 
 
 def test_runs_are_reproducible():
