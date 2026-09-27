@@ -1,211 +1,241 @@
-# Integration contract: how P2, P3 and P4 use the Building Intelligence subsystem
-
-Everything below is importable today:
+# Integration contract (version 2): how P2, P3 and P4 use the Building Intelligence subsystem
 
 ```bash
 pip install -e ".[dev]"
 ```
 
 All cross-team data types live in `gridweave.models`, and all cross-team interfaces are
-`typing.Protocol`s in `gridweave.interfaces`. You never need to subclass P1 code. Any class with the
-right methods fits, and `isinstance(obj, Auctioneer)` works at runtime. Every `python` block in this
-file is executed by `tests/integration/test_docs_examples.py`, so the examples cannot silently go stale.
+`typing.Protocol`s in `gridweave.interfaces` (`CONTRACT_VERSION = "2.0"`). You never subclass P1 code:
+any class with the right methods fits, and `isinstance(obj, Auctioneer)` works at runtime.
+`gridweave.contracts.validate_clearing` / `validate_dispatch` check that what one workstream returns is
+consistent with what another sent. Every `python` block in this file is executed by
+`tests/integration/test_docs_examples.py`.
+
+## Ownership
+
+| Workstream | Owns | P1 provides |
+|---|---|---|
+| **P1** Building intelligence | Building Agent, demand simulation, forecasting, load classification, priority, bid, **settlement against realised demand**, local response (defer/curtail, backlog) | this repository |
+| **P2** Market | Auction mechanism, bid ranking, pricing, allocation optimisation, **whether critical demand is a hard constraint** | `Bid`, `SupplyOffer` in; `ClearingResult` out |
+| **P3** Supply | Grid, solar and battery models, **supply offers**, **dispatch**, state of charge | `SupplyOffer`, `DispatchRequest`, `DispatchResult` |
+| **P4** Coordination | Environment and time progression, events, re-auction policy, dashboard, global metrics | `DemandAgent`, `EnvironmentStream` protocols, `MockCoordinator` reference loop |
+
+The mocks in `gridweave.mocks` (`MockAuctioneer`, `MockGrid`, `MockSolar`, `MockBattery`, `MockSupply`,
+`MockCoordinator`) are **test doubles**, not proposals for the real P2/P3/P4 components.
+
+## One slot, end to end
 
 ```
-                 ┌──────── BidContext(slot, scarcity) ─────────┐
-Observation      │                                             │
- ──────────► BuildingAgent ── Bid ──► Auctioneer (P2) ──┐   Coordinator (P4)
-             ▲    (P1)                     ▲            │        │
-             └──────── Allocation ─────────┼────────────┘        │
-                                           └── available_supply_kw ◄── SupplyProvider (P3)
+P4  env.step() -> agent.observe()             history up to slot t-1 (warm-up / non-bid slots)
+P1  agent.generate_bid(BidContext(t))         forecast-based Bid
+P3  supply.offers(t)                          [SupplyOffer]  per source: kW limit + marginal price
+P4  if Σ requested > Σ offered:
+P1      agent.generate_bid(BidContext(t, scarcity))   revised Bid: flexible load trimmed (demand response)
+P2  auction.clear(t, bids, offers)            ClearingResult: one Allocation per bid + DispatchRequests
+P4  validate_clearing(...)
+P3  supply.dispatch(requests)                 [DispatchResult]: delivered kW, new state (e.g. SOC)
+P4  env.step()                                realised Observation for slot t
+P1  agent.settle(allocation, realised)        Settlement: served, critical shortfall, deferred, curtailed
+P4  env.apply_settlement(settlement)          environment state for t+1 (closed loop)
 ```
+
+The **bid is a forecast**; the **settlement is the truth**. Service metrics (served energy, critical
+shortfall, deferral) come only from settlements, so forecast errors have consequences: a building
+that forecast 30 kW, bid 30 kW and received 30 kW but actually needed 40 kW is 10 kW short.
 
 ---
 
-## For Person 2: auction and market
+## For Person 2: market
 
-**You receive** `gridweave.models.Bid` objects. The fields, units and guaranteed invariants are in
-[bid_contract.md](bid_contract.md).
-**You implement** the `Auctioneer` protocol:
+**You implement** `Auctioneer.clear(time_slot, bids, offers) -> ClearingResult`:
 
 ```python
 from typing import Sequence
-from gridweave.models import Allocation, Bid, TimeSlot
+from gridweave.models import Allocation, Bid, ClearingResult, DispatchRequest, SupplyOffer, TimeSlot
 
-class MyAuction:
-    def __init__(self):
-        self.book: dict[TimeSlot, dict[str, Bid]] = {}
+class MeritOrderAuction:
+    """Toy example: serve critical load first, then by willingness to pay; dispatch cheapest sources."""
 
-    def submit_bid(self, bid: Bid) -> None:
-        # a higher revision from the same building replaces the earlier one
-        self.book.setdefault(bid.time_slot, {})[bid.building_id] = bid
-
-    def clear(self, time_slot: TimeSlot, available_supply_kw: float) -> Sequence[Allocation]:
-        bids = self.book.pop(time_slot, {}).values()
-        # ... your mechanism. Here: serve critical first, then by willingness to pay
-        remaining, out = available_supply_kw, []
+    def clear(self, time_slot: TimeSlot, bids: Sequence[Bid], offers: Sequence[SupplyOffer]) -> ClearingResult:
+        remaining = sum(o.available_kw for o in offers)
+        granted = {}
+        for b in bids:                                           # critical first (a policy choice P2 owns)
+            granted[b.bid_id] = min(b.critical_power_kw, remaining)
+            remaining -= granted[b.bid_id]
         for b in sorted(bids, key=lambda b: -b.willingness_to_pay):
-            give = min(b.requested_power_kw, remaining)
-            remaining -= give
-            out.append(Allocation(b.bid_id, b.building_id, time_slot, give, clearing_price=b.willingness_to_pay))
-        return out
+            extra = min(b.requested_power_kw - granted[b.bid_id], remaining)
+            granted[b.bid_id] += extra
+            remaining -= extra
+        need, dispatch = sum(granted.values()), []
+        for o in sorted(offers, key=lambda o: o.marginal_price):  # merit order
+            take = min(o.available_kw, need)
+            if take > 0:
+                dispatch.append(DispatchRequest(o.source_id, time_slot, take))
+                need -= take
+        allocations = tuple(Allocation(b.bid_id, b.building_id, time_slot, granted[b.bid_id]) for b in bids)
+        return ClearingResult(time_slot, allocations, tuple(dispatch))
 
 from gridweave.interfaces import Auctioneer
-assert isinstance(MyAuction(), Auctioneer)
+assert isinstance(MeritOrderAuction(), Auctioneer)
 ```
 
-**Rules your allocations must follow** (the agent enforces the first one):
+**Rules** (checked by `gridweave.contracts.validate_clearing`):
 
-1. Echo `bid_id`, `building_id` and `time_slot` exactly. Otherwise the agent raises `AllocationMismatchError`.
-2. `allocated_power_kw ≥ 0`, and `Σ allocated ≤ available_supply_kw`.
-3. If you fill in `supply_mix`, it must sum to `allocated_power_kw`.
+1. Exactly one `Allocation` per bid (zero is allowed), echoing `bid_id`, `building_id` and `time_slot`.
+2. No allocation above its bid's `requested_power_kw`; total allocation within total offered supply.
+3. Dispatch only to sources that offered, within each offer, and with Σ dispatch = Σ allocation.
+4. If you fill `Allocation.supply_mix`, it must sum to `allocated_power_kw`.
 
-**Testing your auction without P1's agents.** Load realistic bids straight from the sample file, or
-generate fresh ones:
+**Test without P1 or P3:**
 
 ```python
 import json
-from gridweave.models import Bid
+from gridweave.contracts import validate_clearing
+from gridweave.models import Bid, SourceType, SupplyOffer
 
 bids = [Bid.from_dict(d) for d in json.load(open("data/sample/sample_bids.json"))]
-assert all(b.critical_power_kw <= b.minimum_power_kw <= b.requested_power_kw for b in bids)
+slot = bids[0].time_slot
+offers = [SupplyOffer("grid", SourceType.GRID, slot, 250, 10.0),
+          SupplyOffer("solar", SourceType.SOLAR, slot, 0, 0.0),
+          SupplyOffer("battery", SourceType.BATTERY, slot, 30, 7.0)]
+result = MeritOrderAuction().clear(slot, bids, offers)
+validate_clearing(result, bids, offers)
+assert all(b.requested_power_kw <= b.capacity_kw for b in bids)
 ```
 
-To run your auction inside the full simulated loop, swap it for the mock:
-`MockCoordinator(agents, sims, MyAuction(), MockGrid(420))` (see the P4 section). `tests/unit/test_mocks.py`
-shows the property checks worth copying: supply never exceeded, no allocation above request, revisions
-replace, critical tier first.
-
 **Signals you may use:** `critical_power_kw` (hard need), `minimum_power_kw` (soft need),
-`priority_score`, `willingness_to_pay` and `maximum_price` (valuation), `flexibility_score`, and
-`revision` (negotiation round). How they are weighed is entirely your decision.
+`priority_score` and `willingness_to_pay` (both derived partly from the same priority factors, so do
+not simply add them), `flexibility_score`, `voluntary_reduction_kw` and `revision` (demand-response
+round), and each offer's `marginal_price`. Whether critical demand is a **hard constraint** of clearing is
+your design decision; P1 only identifies it and reports shortfalls afterwards.
 
 ---
 
-## For Person 3: energy supply (grid, solar, battery)
+## For Person 3: supply
 
-**You implement** the `SupplyProvider` protocol: how much power is available in a slot.
+**You implement** `SupplyProvider.offers(slot)` and `SupplyProvider.dispatch(requests)`:
 
 ```python
-from gridweave.models import TimeSlot
+from datetime import datetime
+from gridweave.models import DispatchRequest, DispatchResult, SourceType, SupplyOffer, TimeSlot
 
 class CampusSupply:
-    def __init__(self, grid_kw: float, solar_peak_kw: float):
-        self.grid_kw, self.solar_peak_kw = grid_kw, solar_peak_kw
+    def __init__(self, grid_kw: float, battery_kwh: float, battery_kw: float, soc: float = 0.8):
+        self.grid_kw, self.battery_kwh, self.battery_kw, self.soc = grid_kw, battery_kwh, battery_kw, soc
 
-    def available_power_kw(self, time_slot: TimeSlot) -> float:
-        hour = time_slot.start.hour + time_slot.start.minute / 60
-        solar = self.solar_peak_kw * max(0.0, 1 - abs(hour - 12.5) / 5.5)   # toy bell curve
-        return self.grid_kw + solar
+    def _battery_kw(self, slot: TimeSlot) -> float:
+        return min(self.battery_kw, max(0.0, self.soc - 0.2) * self.battery_kwh / slot.hours)
+
+    def offers(self, time_slot: TimeSlot):
+        return [SupplyOffer("grid", SourceType.GRID, time_slot, self.grid_kw, 10.0),
+                SupplyOffer("battery", SourceType.BATTERY, time_slot, self._battery_kw(time_slot), 7.0,
+                            constraints={"soc": self.soc})]
+
+    def dispatch(self, requests):
+        results = []
+        for r in requests:
+            if r.source_id == "battery":
+                delivered = min(r.requested_kw, self._battery_kw(r.time_slot))
+                self.soc -= delivered * r.time_slot.hours / self.battery_kwh    # SOC falls with discharge
+                results.append(DispatchResult("battery", r.time_slot, r.requested_kw, delivered,
+                                              self._battery_kw(r.time_slot), {"soc": self.soc}))
+            else:
+                delivered = min(r.requested_kw, self.grid_kw)
+                results.append(DispatchResult(r.source_id, r.time_slot, r.requested_kw, delivered,
+                                              self.grid_kw - delivered))
+        return results
 
 from gridweave.interfaces import SupplyProvider
-assert isinstance(CampusSupply(300, 80), SupplyProvider)
+supply = CampusSupply(grid_kw=300, battery_kwh=100, battery_kw=40, soc=0.8)
+assert isinstance(supply, SupplyProvider)
+slot = TimeSlot(datetime(2026, 1, 5, 19, 0))
+result = supply.dispatch([DispatchRequest("battery", slot, 40)])[0]
+assert round(result.state["soc"], 3) == 0.7                              # 10 kWh out of 100 kWh
 ```
+
+`DispatchResult.delivered_kw` may be below `requested_kw` (e.g. the battery hit its minimum SOC).
+The reference coordinator then scales allocations down pro rata, so buildings settle against
+power that was actually delivered.
 
 **What demand looks like, and how to get it:**
 
 | Need | API | Returns |
 |---|---|---|
-| Next-slot demand of one building | `agent.update_state()` or `agent.demand_state` | `DemandState`: current, predicted, backlog, desired, critical, flexible, minimum and maximum kW |
+| Next-slot demand of one building | `agent.update_state()` / `agent.demand_state` | `DemandState`: current, predicted, backlog, desired, critical, flexible, minimum, maximum kW |
 | Multi-slot outlook (battery scheduling) | `agent.demand_outlook(horizon=8)` | `[DemandOutlookPoint(timestamp, predicted_demand_kw, confidence, classification)]` |
-| Offline campus demand series | `build_simulators(cfg)` or `data/sample/campus_demand_7d.csv` | `DemandSample(timestamp, demand_kw)` per 15-min slot |
-| Aggregate campus demand | `gridweave.simulation.total_demand(series)` | `list[DemandSample]` |
+| What actually happened | `agent.last_settlement`, `StepRecord.settlements` | `Settlement` (realised demand, served, shortfall) |
+| Offline demand series | `build_simulators(cfg)` or `data/sample/campus_demand_7d.csv` | `DemandSample(timestamp, demand_kw)` per 15-min slot |
 
-```python
-from gridweave.config import load_campus_config
-from gridweave.factory import build_agents, build_simulators
-from gridweave.simulation import total_demand
-
-cfg = load_campus_config()
-agents, sims = build_agents(cfg), build_simulators(cfg)
-for _ in range(8):                                   # replay the first 2 hours
-    for building_id, sim in sims.items():
-        agents[building_id].observe(sim.step())
-
-outlook = agents["eng_lab"].demand_outlook(horizon=4)
-for p in outlook:
-    print(p.timestamp, round(p.predicted_demand_kw, 1), "critical", round(p.classification.critical_kw, 1))
-
-campus = total_demand({k: s.series for k, s in sims.items()})    # 288 x 15-min aggregate samples
-print("campus peak kW:", round(max(s.demand_kw for s in campus), 1))
-```
-
-**Meaning of critical and flexible load for supply planning.** `critical_kw` must be covered in every
-slot; it is the load your battery reserve should protect. `flexible_kw` can be shifted: the agent
-defers `deferrable_fraction` of any unserved flexible load into later slots (the backlog), which is
-what demand response means here. `minimum_kw` is the lowest level the building accepts without a
-comfort breach. See [demand_model.md](demand_model.md) for the formulas.
-
-**Simulating other scenarios.** Change `configs/campus_default.json` (capacities, fractions, profiles),
-or build `synthetic_campus(n)` for 10, 50 or 100+ buildings. `BuildingSimulator.demand_modifier`
-lets you inject events such as a heat wave: `sim.demand_modifier = lambda ts, kw: kw * 1.2`.
+`critical_kw` is the load your reserve strategy should protect. `flexible_kw` can be shifted:
+unserved flexible energy is deferred (`deferrable_fraction`) into a queue with a deadline
+(`max_deferral_slots`) and re-requested in later slots, or curtailed.
 
 ---
 
-## For Person 4: coordinator, environment and events
+## For Person 4: coordinator and environment
 
-**You drive the lifecycle.** A Building Agent never acts on its own. One market cycle:
+**You drive the loop** (this is what `gridweave.mocks.MockCoordinator.run_step` does, with validation
+and a failure path; use it as the reference):
 
 ```python
 from gridweave.config import load_campus_config
+from gridweave.contracts import validate_clearing, validate_dispatch
 from gridweave.factory import build_agents, build_simulators
-from gridweave.mocks import MockAuctioneer, MockGrid
-from gridweave.models import Allocation, BidContext
+from gridweave.mocks import MockAuctioneer, MockSupply
+from gridweave.models import BidContext
 
 cfg = load_campus_config()
-agents, sims = build_agents(cfg), build_simulators(cfg)
-auction, supply = MockAuctioneer(), MockGrid(420, [(19, 22, 0.8)])   # swap in P2's / P3's classes
+agents, envs = build_agents(cfg), build_simulators(cfg)
+auction, supply = MockAuctioneer(), MockSupply.from_config(cfg.supply)   # swap in P2's / P3's classes
 
-for building_id, sim in sims.items():                     # 1. environment -> observations
-    agents[building_id].observe(sim.step())
+for building_id, env in envs.items():                    # warm-up: first slot is observed only
+    agents[building_id].observe(env.step())
 
-slot = agents["hostel_a"].next_slot()                     # 2. the slot to trade
-available = supply.available_power_kw(slot)
+slot = agents["hostel_a"].next_slot()
+offers = supply.offers(slot)
+available = sum(o.available_kw for o in offers)
 bids = {i: a.generate_bid(BidContext(slot)) for i, a in agents.items()}
-
 requested = sum(b.requested_power_kw for b in bids.values())
-scarcity = max(0.0, 1 - available / requested) if requested else 0.0
-if scarcity > 0:                                          # 3. optional re-auction round
+if requested > available:                                # demand-response round: revised bids trim flexible load
+    scarcity = 1 - available / requested
     bids = {i: a.generate_bid(BidContext(slot, scarcity=scarcity)) for i, a in agents.items()}
 
-for b in bids.values():                                   # 4. market
-    auction.submit_bid(b)
-allocations = {a.building_id: a for a in auction.clear(slot, available)}
+clearing = auction.clear(slot, list(bids.values()), offers)
+validate_clearing(clearing, list(bids.values()), offers)
+results = supply.dispatch(clearing.dispatch)
+validate_dispatch(clearing.dispatch, results)
 
-for i, agent in agents.items():                           # 5. every pending bid MUST be settled
-    b = bids[i]
-    outcome = agent.apply_allocation(allocations.get(i) or Allocation(b.bid_id, i, slot, 0.0))
-    print(i, outcome.status.value, round(outcome.flexible_deferred_kw, 1))
+allocations = {a.building_id: a for a in clearing.allocations}
+for building_id, agent in agents.items():
+    realised = envs[building_id].step()                  # the slot happens: realised demand
+    settlement = agent.settle(allocations[building_id], realised)
+    envs[building_id].apply_settlement(settlement)       # closed loop
+    print(building_id, settlement.status.value, round(settlement.forecast_error_kw, 1), round(settlement.deferred_kw, 1))
 ```
-
-`gridweave.mocks.MockCoordinator` is this loop packaged as a class (`run_step()` / `run(steps)` and
-`summarise()`). Use it as the reference for the real coordinator.
 
 | You want to... | Call | Notes |
 |---|---|---|
-| Feed a measurement | `agent.observe(Observation(building_id, ts, kw))` | Timestamps must strictly increase. Returns `True` if flagged as a spike |
-| Trigger a decision cycle | `agent.generate_bid(BidContext(slot, scarcity))` | Default slot is `agent.next_slot()` |
-| Run a re-auction or negotiation round | Call `generate_bid` again for the **same** slot | Returns revision +1, which replaces the pending bid |
-| Send the auction result | `agent.apply_allocation(allocation)` | Returns an `AllocationOutcome`: served, deferred, curtailed, status, cost |
-| Preview a result without committing | `agent.receive_allocation(allocation)` | No state change |
-| Observe agent state | `agent.snapshot()` (JSON-ready), `agent.phase`, `agent.backlog_kw`, `agent.stats`, `agent.events` | For dashboards and logs |
-| Detect safety events | `outcome.has_critical_shortfall`, `outcome.status` | `critical_shortfall` or `none` means critical load was not served |
-| Inject environment events | `BuildingSimulator.demand_modifier`, or your own `EnvironmentStream` | e.g. heat wave, exam week, outage |
+| Feed a measurement for a slot without a bid | `agent.observe(Observation(...))` | Timestamps must be on the 15-min grid and contiguous (`MisalignedTimestampError`, `MissingSlotError`). Impute missing meter readings upstream and flag them in `metadata` |
+| Trigger a decision cycle | `agent.generate_bid(BidContext(slot, scarcity))` | Slot must be after the latest observation |
+| Run a demand-response / re-auction round | Call `generate_bid` again for the **same** slot with `scarcity > 0` | Revision +1; `requested` drops by `scarcity × scarcity_response × (requested − minimum)`; critical and minimum never drop |
+| Close a slot | `agent.settle(allocation, realised_observation)` | Returns a `Settlement`; the realised demand also joins the forecasting history |
+| Withdraw a bid (auction failed, will re-run) | `agent.abort_bid(reason)` | Back to `observed`; then bid again, or `observe()` the realised slot |
+| Preview an allocation against the bid | `agent.receive_allocation(allocation)` | Ex-ante only, no state change, not a service metric |
+| Observe agent state | `agent.snapshot()`, `agent.stats`, `agent.backlog`, `agent.events` | JSON-ready |
+| Check accounting | `agent.energy_balance_kwh()` | ≈ 0: every kWh of realised demand is served, short, curtailed, expired or queued |
+| Inject environment dynamics | `EnvironmentStream.apply_settlement`, `BuildingSimulator.demand_modifier`, `rebound_fraction` | e.g. curtailed HVAC load rebounds next slot |
 
-**Phase rules** (violations raise `AgentStateError`): you cannot bid before the first observation, you
-cannot bid for a *different* slot while a bid is pending, and you cannot apply an allocation without
-a pending bid. Settle every bid, even with a zero allocation, before moving to the next slot.
-
-**Scarcity signal:** `BidContext.scarcity ∈ [0, 1]` is how the coordinator tells agents that supply
-is short. The agent raises `willingness_to_pay` accordingly; it never changes the quantities it
-requests. A reasonable definition is `max(0, 1 − available / requested)`.
+**Phase rules** (violations raise `AgentStateError`): no bid before the first observation; no bid for a
+different slot while one is pending; the pending slot must be closed with `settle` (or `abort_bid`),
+not `observe`. The reference coordinator settles every agent with a zero allocation if the market or
+dispatch fails or violates the contract (`on_failure="settle_zero"`), so no agent is left `bid_pending`.
 
 ---
 
 ## Stability promise
 
-* Field names, units and invariants of `Bid`, `Allocation`, `AllocationOutcome`, `BidContext`,
-  `Observation`, `DemandState` and `TimeSlot`, and the four protocols, are **frozen for schema 1.0**.
-* New *optional* fields may be added. Breaking changes bump `BID_SCHEMA_VERSION` and are announced
-  to the team first.
+* Contract version 2.0: field names, units and invariants of `Bid` (schema 1.1), `Allocation`,
+  `Settlement`, `SupplyOffer`, `DispatchRequest`, `DispatchResult`, `ClearingResult`, `BidContext`,
+  `Observation`, `DemandState` and `TimeSlot`, and the four protocols.
+* New optional fields may be added. Breaking changes bump the version and are announced first.
 * Everything in `gridweave.mocks` is a test double and may change freely.

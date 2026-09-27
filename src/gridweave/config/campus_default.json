@@ -4,46 +4,142 @@
     "start": "2026-01-05T00:00:00",
     "days": 3,
     "resolution_minutes": 15,
-    "seed": 42
+    "seed": 42,
+    "rebound_fraction": 0.2
   },
   "forecast": {
     "method": "seasonal_ewma",
-    "params": {"season_length": 96, "alpha": 0.3, "beta": 0.8},
+    "params": {
+      "season_length": 96,
+      "alpha": 0.3,
+      "beta": 0.8
+    },
     "fallback_method": "ewma",
-    "fallback_params": {"alpha": 0.6}
+    "fallback_params": {
+      "alpha": 0.6
+    }
   },
   "agent": {
-    "priority_weights": {"criticality": 0.35, "importance": 0.25, "urgency": 0.20, "deprivation": 0.20},
-    "pricing": {"priority_weight": 0.5, "scarcity_weight": 0.3, "deprivation_weight": 0.2},
+    "priority_weights": {
+      "criticality": 0.35,
+      "importance": 0.25,
+      "urgency": 0.2,
+      "deprivation": 0.2
+    },
+    "pricing": {
+      "priority_weight": 0.5,
+      "scarcity_weight": 0.3,
+      "deprivation_weight": 0.2
+    },
     "deprivation_alpha": 0.3,
     "history_limit": 672,
     "spike_detection": true
   },
   "building_type_defaults": {
-    "hostel":   {"critical_fraction": 0.35, "flexible_fraction": 0.65, "min_flexible_fraction": 0.1,
-                 "deferrable_fraction": 0.8, "importance": 0.6, "base_price_per_kwh": 6.0, "max_price_per_kwh": 11.0},
-    "lab":      {"critical_fraction": 0.70, "flexible_fraction": 0.30, "min_flexible_fraction": 0.2,
-                 "deferrable_fraction": 0.5, "importance": 0.9, "base_price_per_kwh": 7.0, "max_price_per_kwh": 14.0},
-    "academic": {"critical_fraction": 0.30, "flexible_fraction": 0.70, "min_flexible_fraction": 0.3,
-                 "deferrable_fraction": 0.4, "importance": 0.7, "base_price_per_kwh": 6.5, "max_price_per_kwh": 12.0},
-    "library":  {"critical_fraction": 0.40, "importance": 0.5},
-    "admin":    {"critical_fraction": 0.30, "importance": 0.4}
+    "hostel": {
+      "critical_fraction": 0.35,
+      "flexible_fraction": 0.65,
+      "min_flexible_fraction": 0.1,
+      "deferrable_fraction": 0.8,
+      "importance": 0.6,
+      "base_price_per_kwh": 6.0,
+      "max_price_per_kwh": 11.0
+    },
+    "lab": {
+      "critical_fraction": 0.7,
+      "flexible_fraction": 0.3,
+      "min_flexible_fraction": 0.2,
+      "deferrable_fraction": 0.5,
+      "importance": 0.9,
+      "base_price_per_kwh": 7.0,
+      "max_price_per_kwh": 14.0
+    },
+    "academic": {
+      "critical_fraction": 0.3,
+      "flexible_fraction": 0.7,
+      "min_flexible_fraction": 0.3,
+      "deferrable_fraction": 0.4,
+      "importance": 0.7,
+      "base_price_per_kwh": 6.5,
+      "max_price_per_kwh": 12.0
+    },
+    "library": {
+      "critical_fraction": 0.4,
+      "importance": 0.5
+    },
+    "admin": {
+      "critical_fraction": 0.3,
+      "importance": 0.4
+    }
   },
   "buildings": [
-    {"building_id": "hostel_a", "name": "Hostel A", "building_type": "hostel",
-     "capacity_kw": 120, "minimum_operational_kw": 10},
-    {"building_id": "hostel_b", "name": "Hostel B", "building_type": "hostel",
-     "capacity_kw": 100, "minimum_operational_kw": 8},
-    {"building_id": "hostel_c", "name": "Hostel C", "building_type": "hostel",
-     "capacity_kw": 140, "minimum_operational_kw": 12,
-     "profile_overrides": {"noise_std": 0.08, "spike_probability": 0.02}},
-    {"building_id": "eng_lab", "name": "Engineering Lab", "building_type": "lab",
-     "capacity_kw": 150, "minimum_operational_kw": 35},
-    {"building_id": "academic_block", "name": "Academic Block", "building_type": "academic",
-     "capacity_kw": 180, "minimum_operational_kw": 8}
+    {
+      "building_id": "hostel_a",
+      "name": "Hostel A",
+      "building_type": "hostel",
+      "capacity_kw": 120,
+      "minimum_operational_kw": 10
+    },
+    {
+      "building_id": "hostel_b",
+      "name": "Hostel B",
+      "building_type": "hostel",
+      "capacity_kw": 100,
+      "minimum_operational_kw": 8
+    },
+    {
+      "building_id": "hostel_c",
+      "name": "Hostel C",
+      "building_type": "hostel",
+      "capacity_kw": 140,
+      "minimum_operational_kw": 12,
+      "profile_overrides": {
+        "noise_std": 0.08,
+        "spike_probability": 0.02
+      }
+    },
+    {
+      "building_id": "eng_lab",
+      "name": "Engineering Lab",
+      "building_type": "lab",
+      "capacity_kw": 150,
+      "minimum_operational_kw": 35
+    },
+    {
+      "building_id": "academic_block",
+      "name": "Academic Block",
+      "building_type": "academic",
+      "capacity_kw": 180,
+      "minimum_operational_kw": 8
+    }
   ],
   "supply": {
-    "mock_grid_capacity_kw": 420,
-    "shortage_windows": [[19.0, 22.0, 0.8]]
+    "_note": "Illustrative mock supply for demos (P3 owns real supply models). Values fixed a priori, not tuned to results.",
+    "sources": [
+      {
+        "type": "grid",
+        "capacity_kw": 380,
+        "price_per_kwh": 10.0,
+        "shortage_windows": [
+          [
+            19.0,
+            22.0,
+            0.8
+          ]
+        ]
+      },
+      {
+        "type": "solar",
+        "peak_kw": 60
+      },
+      {
+        "type": "battery",
+        "capacity_kwh": 100,
+        "max_power_kw": 30,
+        "soc": 0.9,
+        "min_soc": 0.2,
+        "price_per_kwh": 7.0
+      }
+    ]
   }
 }

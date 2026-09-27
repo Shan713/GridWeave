@@ -50,5 +50,6 @@ def build_simulators(campus: CampusConfig, periods: int | None = None) -> dict[s
     for b in campus.buildings:
         gen = DemandGenerator(b.profile, b.spec.capacity_kw, derive_seed(sim.seed, b.spec.building_id),
                               sim.resolution_minutes)
-        out[b.spec.building_id] = BuildingSimulator(b.spec, gen.generate(sim.start, periods))
+        out[b.spec.building_id] = BuildingSimulator(b.spec, gen.generate(sim.start, periods),
+                                                    rebound_fraction=sim.rebound_fraction)
     return out

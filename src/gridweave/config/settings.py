@@ -19,7 +19,7 @@ from gridweave.bidding.bid_generator import PricingPolicy
 from gridweave.bidding.priority import PriorityWeights
 from gridweave.models.building import BuildingSpec, BuildingType
 from gridweave.simulation.profiles import DemandProfile, get_profile
-from gridweave.utils.validation import ValidationError
+from gridweave.utils.validation import ValidationError, require_fraction
 
 #: The default campus ships *inside* the package (package data), so it is
 #: available after a plain ``pip install .`` as well as an editable install.
@@ -37,8 +37,10 @@ class SimulationSettings:
     days: int = 3
     resolution_minutes: int = 15
     seed: int = 42
+    rebound_fraction: float = 0.0
 
     def __post_init__(self) -> None:
+        require_fraction("simulation.rebound_fraction", self.rebound_fraction)
         if self.days < 1:
             raise ValidationError("simulation.days must be >= 1")
         if self.resolution_minutes <= 0 or 1440 % self.resolution_minutes:

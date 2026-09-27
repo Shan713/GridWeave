@@ -1,4 +1,8 @@
-"""Execute every ```python block in the teammate-facing docs so they never go stale."""
+"""Execute every ```python block in the teammate-facing docs so they never go stale.
+
+Blocks of one document share a namespace and run in order (the docs read
+top to bottom, like a notebook), so block N is run after blocks 0..N-1.
+"""
 from __future__ import annotations
 
 import os
@@ -23,7 +27,9 @@ CASES = [(doc, i, code) for doc in DOCS if (ROOT / doc).exists()
 def test_doc_example_runs(doc, index, code, capsys):
     cwd = os.getcwd()
     os.chdir(ROOT)  # examples use repo-relative paths such as data/sample/...
+    namespace = {"__name__": "__docs__"}
     try:
-        exec(compile(code, f"{doc}[block {index}]", "exec"), {"__name__": "__docs__"})
+        for i, block in enumerate(python_blocks(ROOT / doc)[: index + 1]):
+            exec(compile(block, f"{doc}[block {i}]", "exec"), namespace)
     finally:
         os.chdir(cwd)

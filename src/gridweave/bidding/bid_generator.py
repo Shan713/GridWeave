@@ -7,8 +7,11 @@ Division of responsibility (the P1/P2 boundary):
   (``willingness_to_pay``, capped by ``maximum_price``).
 * **P2 (auction)** decides *how bids compete* and *who gets what*.
 
-Bidding is truthful: ``requested_power_kw`` is the building's real desired
-demand. Strategic behaviour, if any, lives only in the price.
+Quantities are *forecast-based*: ``requested_power_kw`` is the forecast
+demand plus deferred backlog, optionally trimmed by a voluntary reduction
+when the coordinator signals scarcity (demand response). This is a design
+stance, not an incentive guarantee: whether reporting true demand is in a
+building's interest depends on P2's mechanism.
 
 Willingness to pay (currency/kWh)::
 
@@ -72,9 +75,14 @@ class BidGenerator:
         created_at: datetime,
         deprivation: float = 0.0,
         revision: int = 0,
+        voluntary_reduction_kw: float = 0.0,
         extra_explanation: Mapping[str, Any] | None = None,
     ) -> Bid:
-        requested = state.desired_demand_kw
+        headroom = state.desired_demand_kw - state.minimum_demand_kw
+        if not 0.0 <= voluntary_reduction_kw <= headroom + 1e-9:
+            raise ValidationError(f"voluntary_reduction_kw must be within [0, {headroom}]")
+        reduction = min(voluntary_reduction_kw, headroom)
+        requested = state.desired_demand_kw - reduction
         flexibility = (requested - state.minimum_demand_kw) / requested if requested > 0 else 0.0
         wtp = self.willingness_to_pay(spec, priority.score, context.scarcity, deprivation)
         explanation = {
@@ -86,6 +94,7 @@ class BidGenerator:
                 "deprivation": deprivation,
                 "pressure": self.pricing.pressure(priority.score, context.scarcity, deprivation),
             },
+            "voluntary_reduction_kw": reduction,
             "demand": state.to_dict(),
         }
         explanation.update(extra_explanation or {})
@@ -97,12 +106,13 @@ class BidGenerator:
             requested_power_kw=requested,
             minimum_power_kw=state.minimum_demand_kw,
             critical_power_kw=state.critical_demand_kw,
-            flexible_power_kw=state.flexible_demand_kw,
+            flexible_power_kw=state.flexible_demand_kw - reduction,
             priority_score=priority.score,
             flexibility_score=clamp(flexibility),
             willingness_to_pay=wtp,
             maximum_price=spec.max_price_per_kwh,
             revision=revision,
             capacity_kw=spec.capacity_kw,
+            voluntary_reduction_kw=reduction,
             explanation=explanation,
         )

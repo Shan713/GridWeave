@@ -94,9 +94,11 @@ t0 = datetime(2026, 1, 5, 18, 0)
 for i, kw in enumerate([34.0, 37.0, 39.5, 41.0]):
     agent.observe(Observation("hostel_a", t0 + i * timedelta(minutes=15), kw))
 
-bid = agent.generate_bid()                         # forecast -> classify -> priority -> bid
-outcome = agent.apply_allocation(Allocation(bid.bid_id, "hostel_a", bid.time_slot, 32.0))
-print(outcome.status.value, outcome.flexible_deferred_kw, agent.backlog_kw)
+bid = agent.generate_bid()                        # forecast -> classify -> priority -> bid
+allocation = Allocation(bid.bid_id, "hostel_a", bid.time_slot, 32.0)              # from the market (P2)
+realised = Observation("hostel_a", bid.time_slot.start, 44.0)                     # what actually happened
+settlement = agent.settle(allocation, realised)   # judged against realised demand, not the bid
+print(settlement.status.value, settlement.forecast_error_kw, settlement.deferred_kw, agent.backlog_kw)
 ```
 
 ## 5. Data model

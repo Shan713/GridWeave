@@ -1,4 +1,7 @@
-"""How a building reacts to what the auction granted it.
+"""Ex-ante interpretation of an allocation against the bid it answers.
+
+Service metrics are *not* computed here; see ``BuildingAgent.settle`` and
+:class:`gridweave.models.Settlement`, which judge against realised demand.
 
 Serving order is fixed and safety-first:
 
@@ -37,9 +40,8 @@ def classify_status(bid: Bid, accepted_kw: float) -> AllocationStatus:
     return AllocationStatus.CRITICAL_SHORTFALL
 
 
-def respond_to_allocation(bid: Bid, allocation: Allocation, deferrable_fraction: float) -> AllocationOutcome:
-    """Pure function: compute the building's response. Does not mutate anything."""
-    require_fraction("deferrable_fraction", deferrable_fraction)
+def check_allocation_matches(bid: Bid, allocation: Allocation) -> None:
+    """Raise :class:`AllocationMismatchError` unless ``allocation`` answers ``bid``."""
     if allocation.bid_id != bid.bid_id:
         raise AllocationMismatchError(f"allocation for bid {allocation.bid_id!r} applied to bid {bid.bid_id!r}")
     if allocation.building_id != bid.building_id:
@@ -48,6 +50,17 @@ def respond_to_allocation(bid: Bid, allocation: Allocation, deferrable_fraction:
         )
     if allocation.time_slot != bid.time_slot:
         raise AllocationMismatchError(f"allocation slot {allocation.time_slot} != bid slot {bid.time_slot}")
+
+
+def respond_to_allocation(bid: Bid, allocation: Allocation, deferrable_fraction: float) -> AllocationOutcome:
+    """*Ex-ante* view: what this allocation means relative to the **bid**.
+
+    Pure; does not mutate anything. Useful for P2 to reason about a clearing
+    before the slot happens. It is **not** the service outcome: that comes
+    from :meth:`BuildingAgent.settle`, which uses realised demand.
+    """
+    require_fraction("deferrable_fraction", deferrable_fraction)
+    check_allocation_matches(bid, allocation)
 
     accepted = min(allocation.allocated_power_kw, bid.requested_power_kw)
     critical_served = min(accepted, bid.critical_power_kw)

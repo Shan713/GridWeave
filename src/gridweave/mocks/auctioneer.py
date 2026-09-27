@@ -1,63 +1,67 @@
-"""MockAuctioneer: a simple, transparent stand-in for P2's market.
+"""MockAuctioneer: a transparent stand-in for P2's market. NOT the project's auction.
 
-Clearing rule (deliberately naive, *not* a proposal for the real mechanism):
+Clearing rule (deliberately naive):
 
-1. Critical tier — every bid's ``critical_power_kw``; if supply is short it
-   is shared pro rata.
-2. Minimum tier — ``minimum - critical``; pro rata on what is left.
-3. Flexible tier — ``requested - minimum``; greedily by priority, then
-   willingness to pay, then building id (deterministic tie-break).
-
-Pay-as-bid: ``clearing_price = willingness_to_pay``.
+1. Supply = sum of offered kW.
+2. Allocation: critical tier pro rata, then the rest of each minimum pro
+   rata, then flexible power greedily by priority, willingness to pay,
+   building id.
+3. Dispatch: merit order (cheapest offer first) until total allocation is
+   covered.
+4. Pay-as-bid price; each allocation's ``supply_mix`` is its pro-rata share
+   of the dispatched sources.
 """
 from __future__ import annotations
+
+from typing import Sequence
 
 from gridweave.models.allocation import Allocation
 from gridweave.models.bid import Bid
 from gridweave.models.common import TimeSlot
-from gridweave.utils.validation import ValidationError, require_non_negative
+from gridweave.models.supply import ClearingResult, DispatchRequest, SupplyOffer
 
 
 class MockAuctioneer:
     def __init__(self) -> None:
-        self._book: dict[TimeSlot, dict[str, Bid]] = {}
-        self.history: list[tuple[TimeSlot, list[Bid], list[Allocation]]] = []
+        self.history: list[ClearingResult] = []
 
-    def submit_bid(self, bid: Bid) -> None:
-        """Accept a bid; a later revision from the same building replaces the earlier one."""
-        if not isinstance(bid, Bid):
-            raise ValidationError(f"expected Bid, got {type(bid).__name__}")
-        slot_book = self._book.setdefault(bid.time_slot, {})
-        existing = slot_book.get(bid.building_id)
-        if existing is not None and existing.revision > bid.revision:
-            raise ValidationError(f"stale bid revision {bid.revision} for {bid.building_id}")
-        slot_book[bid.building_id] = bid
-
-    def pending_bids(self, time_slot: TimeSlot) -> list[Bid]:
-        return list(self._book.get(time_slot, {}).values())
-
-    def clear(self, time_slot: TimeSlot, available_supply_kw: float) -> list[Allocation]:
-        supply = require_non_negative("available_supply_kw", available_supply_kw)
-        bids = sorted(self._book.pop(time_slot, {}).values(), key=lambda b: b.building_id)
+    def clear(self, time_slot: TimeSlot, bids: Sequence[Bid], offers: Sequence[SupplyOffer]) -> ClearingResult:
+        bids = sorted(bids, key=lambda b: b.building_id)
+        supply = sum(o.available_kw for o in offers)
         granted = {b.bid_id: 0.0 for b in bids}
-
+        remaining = supply
         for need_of in (lambda b: b.critical_power_kw, lambda b: b.minimum_power_kw - b.critical_power_kw):
             needs = {b.bid_id: need_of(b) for b in bids}
             total = sum(needs.values())
-            share = 1.0 if total <= supply else (supply / total if total > 0 else 0.0)
+            share = 1.0 if total <= remaining else (remaining / total if total > 0 else 0.0)
             for bid_id, need in needs.items():
                 granted[bid_id] += need * share
-            supply = max(0.0, supply - total * share)
-
+            remaining = max(0.0, remaining - total * share)
         for b in sorted(bids, key=lambda b: (-b.priority_score, -b.willingness_to_pay, b.building_id)):
-            give = min(b.requested_power_kw - b.minimum_power_kw, supply)
+            give = min(b.requested_power_kw - b.minimum_power_kw, remaining)
             granted[b.bid_id] += give
-            supply -= give
+            remaining -= give
 
-        allocations = [
-            Allocation(b.bid_id, b.building_id, time_slot, granted[b.bid_id], clearing_price=b.willingness_to_pay,
-                       metadata={"mechanism": "mock_tiered_pay_as_bid"})
-            for b in bids
-        ]
-        self.history.append((time_slot, bids, allocations))
-        return allocations
+        total_alloc = sum(granted.values())
+        dispatch, left = [], total_alloc
+        for o in sorted(offers, key=lambda o: (o.marginal_price, o.source_id)):
+            take = min(o.available_kw, left)
+            if take > 0:
+                dispatch.append(DispatchRequest(o.source_id, time_slot, take))
+                left -= take
+        shares = {d.source_id: d.requested_kw / total_alloc for d in dispatch} if total_alloc > 0 else {}
+
+        allocations = []
+        for b in bids:
+            kw = granted[b.bid_id]
+            mix = {src: kw * sh for src, sh in shares.items()} if kw > 0 else {}
+            if mix:  # absorb float rounding in the last source so the mix sums exactly
+                last = next(reversed(mix))
+                mix[last] = kw - sum(v for k, v in mix.items() if k != last)
+            allocations.append(Allocation(b.bid_id, b.building_id, time_slot, kw,
+                                          clearing_price=b.willingness_to_pay, supply_mix=mix,
+                                          metadata={"mechanism": "mock_tiered_pay_as_bid"}))
+        result = ClearingResult(time_slot, tuple(allocations), tuple(dispatch),
+                                metadata={"mechanism": "mock_tiered_pay_as_bid", "supply_kw": supply})
+        self.history.append(result)
+        return result

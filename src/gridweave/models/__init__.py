@@ -12,6 +12,7 @@ from gridweave.models.common import (
 )
 from gridweave.models.context import BidContext
 from gridweave.models.demand import DemandSample, DemandState, LoadClassification, Observation
+from gridweave.models.settlement import DeferredEnergy, Settlement, settlement_status
 from gridweave.models.supply import ClearingResult, DispatchRequest, DispatchResult, SourceType, SupplyOffer
 
 __all__ = [
@@ -27,15 +28,18 @@ __all__ = [
     "DispatchRequest",
     "DispatchResult",
     "DEFAULT_RESOLUTION_MINUTES",
+    "DeferredEnergy",
     "DemandSample",
     "DemandState",
     "LoadClassification",
     "MisalignedTimestampError",
     "MissingSlotError",
     "Observation",
+    "Settlement",
     "SourceType",
     "SupplyOffer",
     "TimeSlot",
     "is_aligned",
     "require_aligned",
+    "settlement_status",
 ]

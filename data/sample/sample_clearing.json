@@ -1,0 +1,116 @@
+{
+  "time_slot": {
+    "start": "2026-01-05T20:00:00",
+    "duration_minutes": 15
+  },
+  "allocations": [
+    {
+      "bid_id": "academic_block:20260105T2000:r0",
+      "building_id": "academic_block",
+      "time_slot": {
+        "start": "2026-01-05T20:00:00",
+        "duration_minutes": 15
+      },
+      "allocated_power_kw": 12.67442061213719,
+      "clearing_price": 7.588772,
+      "supply_mix": {
+        "battery": 1.1384210130662147,
+        "grid": 11.535999599070976
+      },
+      "metadata": {
+        "mechanism": "mock_tiered_pay_as_bid"
+      }
+    },
+    {
+      "bid_id": "eng_lab:20260105T2000:r0",
+      "building_id": "eng_lab",
+      "time_slot": {
+        "start": "2026-01-05T20:00:00",
+        "duration_minutes": 15
+      },
+      "allocated_power_kw": 79.36731700995506,
+      "clearing_price": 8.645,
+      "supply_mix": {
+        "battery": 7.1288009290378795,
+        "grid": 72.23851608091718
+      },
+      "metadata": {
+        "mechanism": "mock_tiered_pay_as_bid"
+      }
+    },
+    {
+      "bid_id": "hostel_a:20260105T2000:r0",
+      "building_id": "hostel_a",
+      "time_slot": {
+        "start": "2026-01-05T20:00:00",
+        "duration_minutes": 15
+      },
+      "allocated_power_kw": 101.79954291433106,
+      "clearing_price": 6.68125,
+      "supply_mix": {
+        "battery": 9.143671519251292,
+        "grid": 92.65587139507977
+      },
+      "metadata": {
+        "mechanism": "mock_tiered_pay_as_bid"
+      }
+    },
+    {
+      "bid_id": "hostel_b:20260105T2000:r0",
+      "building_id": "hostel_b",
+      "time_slot": {
+        "start": "2026-01-05T20:00:00",
+        "duration_minutes": 15
+      },
+      "allocated_power_kw": 79.31525099409033,
+      "clearing_price": 6.68125,
+      "supply_mix": {
+        "battery": 7.124124340786557,
+        "grid": 72.19112665330378
+      },
+      "metadata": {
+        "mechanism": "mock_tiered_pay_as_bid"
+      }
+    },
+    {
+      "bid_id": "hostel_c:20260105T2000:r0",
+      "building_id": "hostel_c",
+      "time_slot": {
+        "start": "2026-01-05T20:00:00",
+        "duration_minutes": 15
+      },
+      "allocated_power_kw": 60.84346846948635,
+      "clearing_price": 6.68125,
+      "supply_mix": {
+        "battery": 5.464982197858055,
+        "grid": 55.3784862716283
+      },
+      "metadata": {
+        "mechanism": "mock_tiered_pay_as_bid"
+      }
+    }
+  ],
+  "dispatch": [
+    {
+      "source_id": "battery",
+      "time_slot": {
+        "start": "2026-01-05T20:00:00",
+        "duration_minutes": 15
+      },
+      "requested_kw": 30.0
+    },
+    {
+      "source_id": "grid",
+      "time_slot": {
+        "start": "2026-01-05T20:00:00",
+        "duration_minutes": 15
+      },
+      "requested_kw": 304.0
+    }
+  ],
+  "clearing_price": null,
+  "metadata": {
+    "mechanism": "mock_tiered_pay_as_bid",
+    "supply_kw": 334.0
+  }
+}

@@ -48,6 +48,10 @@ class BuildingSpec:
 
     When a flexible load is not served, ``deferrable_fraction`` of it is
     shifted to later slots (backlog) and the rest is curtailed (lost).
+    Deferred energy expires if it is not served within ``max_deferral_slots``.
+
+    Under a scarcity signal the building voluntarily trims its request by
+    ``scarcity * scarcity_response * (requested - minimum)`` (0 = never).
     """
 
     building_id: str
@@ -63,6 +67,8 @@ class BuildingSpec:
     base_price_per_kwh: float = 6.0
     max_price_per_kwh: float = 12.0
     max_backlog_kw: float | None = None
+    max_deferral_slots: int = 8
+    scarcity_response: float = 0.5
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -85,6 +91,10 @@ class BuildingSpec:
         require_non_negative("base_price_per_kwh", self.base_price_per_kwh)
         require_positive("max_price_per_kwh", self.max_price_per_kwh)
         require_le("base_price_per_kwh", self.base_price_per_kwh, "max_price_per_kwh", self.max_price_per_kwh)
+        if isinstance(self.max_deferral_slots, bool) or not isinstance(self.max_deferral_slots, int) \
+                or self.max_deferral_slots < 1:
+            raise ValidationError("max_deferral_slots must be an int >= 1")
+        require_fraction("scarcity_response", self.scarcity_response)
         if self.max_backlog_kw is not None:
             require_non_negative("max_backlog_kw", self.max_backlog_kw)
         object.__setattr__(self, "metadata", dict(self.metadata))
@@ -117,5 +127,7 @@ class BuildingSpec:
             "base_price_per_kwh": self.base_price_per_kwh,
             "max_price_per_kwh": self.max_price_per_kwh,
             "max_backlog_kw": self.max_backlog_kw,
+            "max_deferral_slots": self.max_deferral_slots,
+            "scarcity_response": self.scarcity_response,
             "metadata": dict(self.metadata),
         }

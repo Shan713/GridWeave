@@ -1,8 +1,9 @@
 """Generate the committed sample datasets in data/sample/.
 
-* campus_demand_7d.csv  - 7 days x 15-min demand for every configured building
-* sample_bids.json      - one realistic evening-peak bid per building (for P2)
-* sample_allocations.json - the MockAuctioneer's allocations for those bids
+* campus_demand_7d.csv      - 7 days x 15-min base demand for every configured building (synthetic)
+* sample_bids.json          - one evening-peak bid per building (for P2)
+* sample_offers.json        - the mock supply offers for that slot (for P2/P3)
+* sample_clearing.json      - the MockAuctioneer's ClearingResult for those bids and offers
 
 Usage: python scripts/generate_sample_data.py [--config PATH] [--days 7]
 """
@@ -14,8 +15,9 @@ from dataclasses import replace
 from pathlib import Path
 
 from gridweave.config import load_campus_config
+from gridweave.contracts import validate_clearing
 from gridweave.factory import build_agents, build_simulators
-from gridweave.mocks import MockAuctioneer, MockGrid
+from gridweave.mocks import MockAuctioneer, MockSupply
 from gridweave.simulation import write_demand_csv
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,19 +38,19 @@ def main() -> None:
 
     # Replay Monday up to 19:45 and bid for the 20:00 evening-peak slot.
     agents = build_agents(cfg)
-    steps = 20 * 4
     for building_id, sim in sims.items():
-        for _ in range(steps):
+        for _ in range(20 * 4):
             agents[building_id].observe(sim.step())
     bids = [a.generate_bid() for a in agents.values()]
-    auction = MockAuctioneer()
-    for b in bids:
-        auction.submit_bid(b)
-    grid = MockGrid(cfg.supply["mock_grid_capacity_kw"], cfg.supply.get("shortage_windows", []))
-    allocations = auction.clear(bids[0].time_slot, grid.available_power_kw(bids[0].time_slot))
+    slot = bids[0].time_slot
+    offers = MockSupply.from_config(cfg.supply).offers(slot)
+    clearing = MockAuctioneer().clear(slot, bids, offers)
+    validate_clearing(clearing, bids, offers)
+    (SAMPLE / "sample_allocations.json").unlink(missing_ok=True)  # superseded by sample_clearing.json
     (SAMPLE / "sample_bids.json").write_text(json.dumps([b.to_dict() for b in bids], indent=2))
-    (SAMPLE / "sample_allocations.json").write_text(json.dumps([a.to_dict() for a in allocations], indent=2))
-    print(f"wrote data/sample/sample_bids.json and sample_allocations.json for slot {bids[0].time_slot}")
+    (SAMPLE / "sample_offers.json").write_text(json.dumps([o.to_dict() for o in offers], indent=2))
+    (SAMPLE / "sample_clearing.json").write_text(json.dumps(clearing.to_dict(), indent=2))
+    print(f"wrote sample_bids.json, sample_offers.json, sample_clearing.json for slot {slot}")
 
 
 if __name__ == "__main__":
