@@ -16,8 +16,9 @@ Factors:
   with running experiments rank above admin offices).
 * ``urgency`` — deferred-demand pressure: ``backlog / backlog_limit``.
   Rises every time the building's flexible load is postponed.
-* ``deprivation`` — exponentially smoothed share of recent requests that
-  went unserved (historical learning from past allocations).
+* ``deprivation`` — the agent's deprivation state: an EWMA of the share of
+  realised need left unserved in past settlements (a heuristic state
+  update, not machine learning).
 """
 from __future__ import annotations
 

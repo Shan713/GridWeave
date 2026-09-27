@@ -2,7 +2,8 @@
 
 ## Synthetic demand generation
 
-`DemandGenerator` produces one realistic 15-minute series per building:
+`DemandGenerator` produces one plausible **synthetic** 15-minute series per building. The shapes are
+hand-designed campus timetables. They are **not** fitted to, or validated against, real meter data.
 
 ```
 activity(t) ∈ [0,1]   from the building's DemandProfile (weekday or weekend shape), smoothed
@@ -18,6 +19,10 @@ demand(t)   = clip(expected(t)·(1+noise(t)) + spike(t), 0, capacity)
   `weekend_factor` scaling (lab 0.3, academic 0.1, admin 0.05).
 * **Building type:** each type has its own built-in profile (`gridweave.simulation.profiles`). A custom
   profile can be given inline in the campus JSON, or a built-in one tweaked with `profile_overrides`.
+* **What this favours:** the noise-free template repeats exactly on every weekday, and the AR(1)
+  noise makes the next slot close to the current one. Seasonal forecasters (for the template) and
+  fast EWMA (for the noise) are therefore structurally favoured. The forecasting experiment reports a
+  noise-free "oracle" row to make this visible.
 * **Reproducibility:** each generator owns a `random.Random(seed)`. Per-building seeds are derived
   from the master seed and the building id via CRC32, so adding a building never changes another
   building's series.
@@ -36,7 +41,7 @@ Run `python examples/generate_profiles.py` to see sparklines of every profile.
 
 ### Sample data
 
-`data/sample/campus_demand_7d.csv` (long format: `timestamp,building_id,demand_kw`) contains
+`data/sample/campus_demand_7d.csv` (long format: `timestamp,building_id,demand_kw`; synthetic) contains
 7 days (Mon–Sun) × 96 slots × 5 buildings = 3,360 rows for Hostel A/B/C, Engineering Lab and Academic
 Block (seed 42). Regenerate it with `python scripts/generate_sample_data.py`. The default campus
 peaks at about 440 kW aggregate, with a weekday median of about 345 kW.
@@ -67,3 +72,17 @@ configurations in `test_invariants_hold_for_random_configurations`):
 | `minimum_operational_kw` | Absolute critical floor, whatever the fraction | lab 35 kW |
 | `min_flexible_fraction` | Comfort floor: part of flexible load the building won't give up (e.g. minimum HVAC) | academic 0.3 |
 | `deferrable_fraction` | Share of unserved flexible load that is shifted (water heating, laundry, EV charging) rather than lost (HVAC comfort) | hostel 0.8, academic 0.4 |
+| `max_deferral_slots` | Deferred energy must be served within this many slots or it expires | 8 (2 h) |
+| `max_backlog_kw` | Cap on queued deferred energy, as kW over one slot (default: capacity) | – |
+| `scarcity_response` | Share of curtailable load (`requested − minimum`) offered back per unit of scarcity in a revised bid | 0.5 |
+
+## Realised demand, deferred energy and rebound
+
+The generator produces each building's exogenous *new* demand. What the building *needs* in a slot
+is that demand plus any deferred energy still waiting (the agent's FIFO queue of kWh with deadlines).
+Settlements compare the allocation with this realised need; see
+[building_agent.md](building_agent.md#settlement-the-slot-is-judged-against-realised-demand).
+`BuildingSimulator` also accepts `rebound_fraction` (campus config `simulation.rebound_fraction`,
+default campus 0.2): that share of *curtailed* load reappears as extra demand in the next slot. This
+makes the environment's future depend on market outcomes. It is a simple assumption, not a calibrated
+thermal model.

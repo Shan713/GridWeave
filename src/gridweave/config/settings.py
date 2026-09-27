@@ -196,7 +196,7 @@ _SYNTHETIC_MIX = (
 
 
 def synthetic_campus(n_buildings: int, seed: int = 42, name: str | None = None) -> CampusConfig:
-    """Generate an ``n``-building campus from a realistic type mix (for
+    """Generate an ``n``-building campus from a fixed type mix (for
     scalability demos and tests). Deterministic for a given ``n``."""
     if n_buildings < 1:
         raise ValidationError("n_buildings must be >= 1")

@@ -1,5 +1,8 @@
 # Forecasting
 
+All forecasters here are **statistical time-series baselines** (moving average, exponential
+smoothing, seasonal repetition). None of them is trained, and none is machine learning.
+
 ## Interface
 
 Every forecaster implements `BaseForecaster.forecast(history, horizon, resolution_minutes=None) -> Forecast`.
@@ -39,22 +42,58 @@ primary metrics.
 
 ## Experiment
 
-Reproduce with `python scripts/run_forecast_experiment.py`. It writes
+Reproduce with `python scripts/run_forecast_experiment.py` (takes about 20 s). It writes
 `data/generated/forecast_experiment.{json,md}`.
 
 * **Dataset:** synthetic demand for the 5 default-campus buildings (Hostel A/B/C, Engineering Lab,
-  Academic Block). 7 days (Mon 2026-01-05 to Sun 2026-01-11, so the weekend is included), 15-minute
-  slots, seeds 42, 43 and 44.
-* **Protocol:** rolling-origin backtest with stride 1 and a 192-sample (2-day) warm-up. That gives
-  480 forecast origins per building and seed, identical for every method. The forecaster only ever
-  sees `series[:t]`; `test_backtest_uses_no_future_data` checks there is no leakage.
-* **Horizons:** 1 slot (15 min: the next market slot, which is what the agent bids on) and 4 slots
-  (1 hour: what `demand_outlook` gives P3).
-* **Metrics:** mean over buildings and seeds.
+  Academic Block). 7 days (Mon 2026-01-05 to Sun 2026-01-11, so the weekend is included), 15-minute slots.
+* **Seeds:**
+  * **Development seeds 42–44.** These were used when the default forecaster and the EWMA fallback
+    α = 0.6 were chosen.
+  * **Held-out seeds 101–105.** These were never used for any modelling decision. **Quote the held-out table.**
+* **Protocol:** rolling-origin backtest with stride 1 and a 192-sample (2-day) warm-up, identical for
+  every method. The forecaster only ever sees `series[:t]`. This is verified by
+  `test_backtest_uses_no_future_data`, and was checked adversarially during the audit: perturbing all
+  future values leaves every forecast bit-identical.
+* **Horizons:** 1 slot (15 min: the next market slot, which the agent bids on) and 4 slots (1 hour:
+  what `demand_outlook` gives P3). There are 480 origins per series at h = 1 and 477 at h = 4.
+* **Averaging:** metrics are computed per (building, seed) series, then averaged with equal weight.
+  RMSE is therefore a mean of per-series RMSEs, not a pooled RMSE.
+* **Oracle row:** the generator's own noise-free expected demand. It is not a forecaster. It shows how
+  much of the signal is a fixed daily template, i.e. how favourable this synthetic data is to seasonal
+  methods. It is horizon-independent, which is why the h=1 and h=4 rows are identical.
 
 ### Results (actual output of the script)
 
-**Horizon 1 (15 min)** - mean over buildings and seeds
+##### Held-out evaluation (quote these): seeds [101, 102, 103, 104, 105]
+
+**Horizon 1 (15 min)**, 5 buildings x 5 seeds = 25 series, 480 origins per series
+
+| Method | MAE (kW) | RMSE (kW) | MAPE (%) | Bias (kW) |
+|---|---:|---:|---:|---:|
+| EWMA(a=0.6) | 4.74 | 7.35 | 8.9 | -0.01 |
+| SeasonalEWMA(96) | 5.04 | 7.86 | 10.9 | +0.36 |
+| MA(4) | 6.50 | 10.11 | 12.4 | -0.02 |
+| EWMA(a=0.3) | 7.34 | 11.11 | 14.8 | -0.02 |
+| SeasonalNaive(96) | 8.16 | 15.77 | 19.4 | +1.77 |
+| MA(8) | 9.79 | 14.89 | 19.8 | -0.03 |
+| *Oracle (noise-free template)* | 3.01 | 4.66 | 5.1 | -0.64 |
+
+**Horizon 4 (60 min)**, 5 buildings x 5 seeds = 25 series, 477 origins per series
+
+| Method | MAE (kW) | RMSE (kW) | MAPE (%) | Bias (kW) |
+|---|---:|---:|---:|---:|
+| SeasonalEWMA(96) | 5.89 | 9.31 | 12.9 | +0.40 |
+| EWMA(a=0.6) | 7.81 | 12.64 | 15.2 | -0.08 |
+| SeasonalNaive(96) | 8.19 | 15.81 | 19.5 | +1.78 |
+| MA(4) | 9.33 | 14.82 | 18.5 | -0.09 |
+| EWMA(a=0.3) | 10.14 | 15.64 | 20.9 | -0.09 |
+| MA(8) | 12.43 | 18.85 | 25.8 | -0.10 |
+| *Oracle (noise-free template)* | 3.01 | 4.66 | 5.1 | -0.64 |
+
+##### Development seeds (used for model selection): seeds [42, 43, 44]
+
+**Horizon 1 (15 min)**, 5 buildings x 3 seeds = 15 series, 480 origins per series
 
 | Method | MAE (kW) | RMSE (kW) | MAPE (%) | Bias (kW) |
 |---|---:|---:|---:|---:|
@@ -64,8 +103,9 @@ Reproduce with `python scripts/run_forecast_experiment.py`. It writes
 | EWMA(a=0.3) | 7.31 | 11.11 | 14.7 | -0.00 |
 | SeasonalNaive(96) | 8.23 | 16.00 | 19.5 | +1.98 |
 | MA(8) | 9.78 | 14.98 | 19.7 | -0.01 |
+| *Oracle (noise-free template)* | 2.95 | 4.47 | 5.2 | -0.25 |
 
-**Horizon 4 (60 min)** - mean over buildings and seeds
+**Horizon 4 (60 min)**, 5 buildings x 3 seeds = 15 series, 477 origins per series
 
 | Method | MAE (kW) | RMSE (kW) | MAPE (%) | Bias (kW) |
 |---|---:|---:|---:|---:|
@@ -75,40 +115,50 @@ Reproduce with `python scripts/run_forecast_experiment.py`. It writes
 | MA(4) | 9.27 | 14.87 | 18.4 | -0.08 |
 | EWMA(a=0.3) | 10.11 | 15.70 | 20.8 | -0.07 |
 | MA(8) | 12.46 | 18.98 | 25.8 | -0.08 |
+| *Oracle (noise-free template)* | 2.95 | 4.47 | 5.2 | -0.25 |
 
-**MAE (kW) per building, horizon 4**
 
-| Building | MA(4) | MA(8) | EWMA(a=0.3) | EWMA(a=0.6) | SeasonalNaive(96) | SeasonalEWMA(96) |
-|---|---:|---:|---:|---:|---:|---:|
-| hostel_a | 9.44 | 12.80 | 10.34 | 7.86 | 6.42 | 5.50 |
-| hostel_b | 7.74 | 10.63 | 8.52 | 6.43 | 5.35 | 4.63 |
-| hostel_c | 11.59 | 15.53 | 12.64 | 9.80 | 9.38 | 8.03 |
-| eng_lab | 8.43 | 10.70 | 8.89 | 7.16 | 9.13 | 5.96 |
-| academic_block | 9.16 | 12.62 | 10.15 | 7.46 | 11.00 | 5.12 |
+### Interpretation (limited to this synthetic dataset)
 
-### Interpretation
+* **Next slot (h = 1):** EWMA (α = 0.6) had the lowest error on the held-out seeds (MAE 4.74 kW),
+  ahead of Seasonal EWMA (5.04). The AR(1) noise in the generator makes the latest reading the
+  strongest short-term signal.
+* **One hour ahead (h = 4):** Seasonal EWMA performed best on the held-out seeds (MAE 5.89 vs
+  7.81 kW, RMSE 9.31 vs 12.64). Flat forecasts cannot anticipate the evening ramp.
+* The held-out ranking matches the development ranking, so the choice made on development seeds
+  transferred to unseen seeds of the **same generator**. That is all it shows.
+* All methods remain well above the noise-free oracle (MAE about 3 kW), which is the floor set by the
+  generator's noise.
 
-* **Next slot (h = 1):** EWMA(α = 0.6) is best (MAE 4.68 kW), narrowly ahead of SeasonalEWMA (4.94).
-  At 15 minutes the most recent reading is the strongest signal, so a fast-reacting smoother wins.
-* **One hour ahead (h = 4):** SeasonalEWMA is clearly best (MAE 5.85 vs 7.74 kW, RMSE 9.50 vs
-  12.64). Flat forecasts (MA, EWMA) cannot anticipate the evening ramp; the seasonal shape can.
-* **Seasonal naive alone** is poor on its own (high RMSE, +2 kW bias). Copying yesterday fails on
-  noisy days and at the Friday-to-Saturday transition. It is weakest for the lab and academic block,
-  whose weekend demand collapses. Adding the EWMA level correction fixes most of this.
-* **Longer windows hurt:** MA(8) and EWMA(0.3) lag the ramps and are worst at both horizons.
+**Correct wording for reports:** "Seasonal EWMA performed best one hour ahead, and EWMA (α = 0.6) one
+slot ahead, on held-out seeds of our synthetic campus demand." Do **not** say "Seasonal EWMA is the best
+forecasting model": the data was generated from a repeating daily template, which structurally
+favours seasonal methods (see [demand_model.md](demand_model.md)).
 
-**Default choice** (`configs/campus_default.json`): `seasonal_ewma` with an `ewma(α=0.6)` fallback
-for the first day, before 97 samples exist. It is within about 0.26 kW of the best method at h = 1
-and much better for the multi-step outlook that P3 plans batteries with. Switching to pure EWMA for
-next-slot bidding is a one-line config change.
+**Default choice** (packaged `campus_default.json`): `seasonal_ewma`, with an `ewma(α=0.6)` fallback
+for the first day, before 97 samples exist. The agent bids one slot ahead, where EWMA was slightly
+better. Seasonal EWMA was chosen for its robustness across horizons and the multi-step outlook P3
+needs. Switching is a one-line config change.
+
+### Forecast errors now have consequences
+
+Since settlements are judged against realised demand, forecast error changes outcomes. The mock
+comparison in `examples/closed_loop_demo.py` (synthetic Tuesday, 5 buildings, mock grid + solar +
+battery) contrasts the default forecaster with a deliberately poor one that predicts yesterday's
+daily mean:
+
+| | forecast MAE | critical-shortfall slots | unused allocation |
+|---|---:|---:|---:|
+| default (Seasonal EWMA) | 3.73 kW | 1 | 167 kWh |
+| poor (flat daily mean) | 31.50 kW | 11 | 1,629 kWh |
 
 ### Limitations
 
-* The data is synthetic and generated by the same family of profiles the seasonal models assume.
-  Real meter data will have holidays, exams, weather effects and metering gaps, and all errors should
-  be expected to be higher.
-* Only daily seasonality (96 slots) is modelled. A weekly season (672 slots) would fix the
-  weekday/weekend transition error but needs at least a week of history.
-* Confidence is heuristic and not calibrated.
+* The data is synthetic, and generated by the same family of profiles the seasonal models assume.
+  Real meter data will have holidays, exams, weather effects and metering gaps; expect higher errors.
+* Only daily seasonality (96 slots). A weekly season would fix the weekday/weekend transition error
+  but needs at least a week of history.
+* The confidence value is a heuristic and is not used in bidding decisions.
 * No exogenous inputs such as temperature, timetable or occupancy. `Observation.metadata` is the
   extension point for them.
+* Irregular input (gaps, wrong resolution) is rejected with `MissingSlotError` rather than repaired.

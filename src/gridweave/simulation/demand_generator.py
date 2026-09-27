@@ -25,7 +25,9 @@ def derive_seed(master_seed: int, key: str) -> int:
 
 
 class DemandGenerator:
-    """Generates a realistic demand series for one building.
+    """Generates a plausible *synthetic* demand series for one building.
+
+    The shapes are hand-designed campus timetables, not fitted to meter data.
 
     Model per slot ``t``::
 
@@ -34,8 +36,9 @@ class DemandGenerator:
         demand(t)   = clip(expected(t) * (1 + noise(t)) + spike(t), 0, capacity)
 
     AR(1) noise gives temporally correlated deviations (a warm afternoon stays
-    warm), which is far more realistic than independent jitter and is exactly
-    what makes forecasting non-trivial.
+    warm), which is more plausible than independent jitter and is what makes
+    short-term forecasting non-trivial. Note that the underlying daily
+    template repeats exactly every weekday, which favours seasonal forecasters.
     """
 
     def __init__(
