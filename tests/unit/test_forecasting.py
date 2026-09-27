@@ -215,3 +215,18 @@ def test_fallback_forecaster_switches_when_history_suffices():
     fc = f.forecast(series([1, 2, 3, 4, 5]), 1)
     assert fc.method == "seasonal_naive" and fc.values == [2]
     assert f.min_history == 1
+
+
+@pytest.mark.parametrize("seed", [101, 104])
+def test_heldout_seed_ranking_matches_reported_experiment(seed):
+    """Held-out seeds (never used for model selection): seasonal EWMA should beat
+    the flat baselines one hour ahead, as the experiment reports. Synthetic data only."""
+    from gridweave.config import load_campus_config
+    from gridweave.simulation import derive_seed
+
+    b = load_campus_config().building("hostel_a")
+    s = DemandGenerator(b.profile, b.spec.capacity_kw, derive_seed(seed, "hostel_a")).generate(T0, 96 * 4)
+    res = {r.method: r.mae for r in compare_forecasters(
+        [SeasonalEWMAForecaster(96), EWMAForecaster(0.6), MovingAverageForecaster(4)],
+        {"hostel_a": s}, horizon=4, warmup=192, stride=2)}
+    assert res["seasonal_ewma"] < res["ewma"] < res["moving_average"]
