@@ -143,3 +143,10 @@ class TestBidGeneration:
             assert bid.critical_power_kw + bid.flexible_power_kw == pytest.approx(bid.requested_power_kw)
             assert 0 <= bid.priority_score <= 1 and 0 <= bid.flexibility_score <= 1
             assert spec.base_price_per_kwh <= bid.willingness_to_pay <= bid.maximum_price
+
+
+def test_generated_bids_always_carry_building_capacity(hostel_spec):
+    for kw in (0, 50, hostel_spec.capacity_kw, 10 * hostel_spec.capacity_kw):
+        bid = make_bid(hostel_spec, kw)
+        assert bid.capacity_kw == hostel_spec.capacity_kw
+        assert bid.requested_power_kw <= bid.capacity_kw

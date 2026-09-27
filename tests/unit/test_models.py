@@ -189,3 +189,29 @@ def test_timeslot(slot):
     assert TimeSlot.from_dict(slot.to_dict()) == slot
     with pytest.raises(ValidationError):
         TimeSlot(slot.start, 0)
+
+
+class TestBidCapacity:
+    """requested <= capacity is enforced only when the bid carries capacity (audit F9)."""
+
+    def test_within_capacity(self, slot):
+        assert make_bid(slot, capacity_kw=120.0).capacity_kw == 120.0
+
+    def test_exactly_at_capacity(self, slot):
+        bid = make_bid(slot, capacity_kw=40.0)
+        assert bid.requested_power_kw == bid.capacity_kw
+
+    def test_above_capacity_rejected(self, slot):
+        with pytest.raises(ValidationError):
+            make_bid(slot, capacity_kw=39.0)
+
+    def test_without_capacity_context_no_check_is_possible(self, slot):
+        assert make_bid(slot, requested_power_kw=10_000.0, flexible_power_kw=9_975.0).capacity_kw is None
+
+    def test_capacity_roundtrip(self, slot):
+        bid = make_bid(slot, capacity_kw=120.0, voluntary_reduction_kw=3.0)
+        assert Bid.from_dict(bid.to_dict()) == bid
+
+    def test_negative_reduction_rejected(self, slot):
+        with pytest.raises(ValidationError):
+            make_bid(slot, voluntary_reduction_kw=-1.0)

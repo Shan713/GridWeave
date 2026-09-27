@@ -18,9 +18,10 @@ from gridweave.utils.validation import (
     require_le,
     require_non_empty,
     require_non_negative,
+    require_positive,
 )
 
-BID_SCHEMA_VERSION = "1.0"
+BID_SCHEMA_VERSION = "1.1"
 
 
 @dataclass(frozen=True)
@@ -35,6 +36,11 @@ class Bid:
     * ``critical_power_kw + flexible_power_kw == requested_power_kw``
     * ``0 <= priority_score <= 1`` and ``0 <= flexibility_score <= 1``
     * ``0 <= willingness_to_pay <= maximum_price``
+    * ``requested_power_kw <= capacity_kw`` **when** ``capacity_kw`` is set.
+      A ``Bid`` cannot know a building's capacity on its own; the
+      ``BuildingAgent`` always sets ``capacity_kw``, so its bids carry the
+      context needed for this check. A hand-built bid without it is not
+      capacity-checked.
     """
 
     bid_id: str
@@ -50,6 +56,8 @@ class Bid:
     willingness_to_pay: float
     maximum_price: float
     revision: int = 0
+    capacity_kw: float | None = None
+    voluntary_reduction_kw: float = 0.0
     explanation: Mapping[str, Any] = field(default_factory=dict)
     schema_version: str = BID_SCHEMA_VERSION
 
@@ -78,6 +86,12 @@ class Bid:
             "requested_power_kw", self.requested_power_kw,
         )
         require_le("willingness_to_pay", self.willingness_to_pay, "maximum_price", self.maximum_price)
+        if self.capacity_kw is not None:
+            object.__setattr__(self, "capacity_kw", require_positive("capacity_kw", self.capacity_kw))
+            require_le("requested_power_kw", self.requested_power_kw, "capacity_kw", self.capacity_kw)
+        object.__setattr__(
+            self, "voluntary_reduction_kw", require_non_negative("voluntary_reduction_kw", self.voluntary_reduction_kw)
+        )
         if isinstance(self.revision, bool) or not isinstance(self.revision, int) or self.revision < 0:
             raise ValidationError("revision must be an int >= 0")
         object.__setattr__(self, "explanation", dict(self.explanation))
@@ -109,6 +123,8 @@ class Bid:
             "willingness_to_pay": self.willingness_to_pay,
             "maximum_price": self.maximum_price,
             "revision": self.revision,
+            "capacity_kw": self.capacity_kw,
+            "voluntary_reduction_kw": self.voluntary_reduction_kw,
             "explanation": dict(self.explanation),
         }
 
@@ -128,6 +144,8 @@ class Bid:
             willingness_to_pay=data["willingness_to_pay"],
             maximum_price=data["maximum_price"],
             revision=data.get("revision", 0),
+            capacity_kw=data.get("capacity_kw"),
+            voluntary_reduction_kw=data.get("voluntary_reduction_kw", 0.0),
             explanation=data.get("explanation", {}),
             schema_version=data.get("schema_version", BID_SCHEMA_VERSION),
         )

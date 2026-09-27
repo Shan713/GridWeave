@@ -103,5 +103,6 @@ class BidGenerator:
             willingness_to_pay=wtp,
             maximum_price=spec.max_price_per_kwh,
             revision=revision,
+            capacity_kw=spec.capacity_kw,
             explanation=explanation,
         )
