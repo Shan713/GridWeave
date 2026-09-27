@@ -6,7 +6,14 @@ import json
 import pytest
 
 from gridweave.agents import BuildingAgent
-from gridweave.config import ForecastSettings, campus_from_dict, load_campus_config, parse_building, synthetic_campus
+from gridweave.config import (
+    ForecastSettings,
+    campus_from_dict,
+    default_config_text,
+    load_campus_config,
+    parse_building,
+    synthetic_campus,
+)
 from gridweave.factory import build_agents, build_forecaster, build_simulators
 from gridweave.forecasting import EWMAForecaster, FallbackForecaster
 from gridweave.models import BuildingType
@@ -24,7 +31,7 @@ def test_default_config_loads():
 
 
 def test_env_overrides(monkeypatch, tmp_path):
-    data = json.loads(load_campus_config.__globals__["DEFAULT_CONFIG_PATH"].read_text())
+    data = json.loads(default_config_text())
     data["buildings"] = data["buildings"][:1]
     path = tmp_path / "c.json"
     path.write_text(json.dumps(data))
@@ -83,3 +90,9 @@ def test_synthetic_campus_scales(n):
     assert len(cfg.buildings) == n and len({b.spec.building_id for b in cfg.buildings}) == n
     sims = build_simulators(cfg, periods=4)
     assert len(sims) == n and all(len(s.series) == 4 for s in sims.values())
+
+
+def test_relative_config_path_resolves_against_cwd(tmp_path, monkeypatch):
+    (tmp_path / "mine.json").write_text(default_config_text())
+    monkeypatch.chdir(tmp_path)
+    assert load_campus_config("mine.json").name == load_campus_config().name

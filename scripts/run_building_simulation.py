@@ -21,7 +21,7 @@ from gridweave.utils.logging import configure
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--config", help="campus config JSON (default: configs/campus_default.json)")
+    parser.add_argument("--config", help="campus config JSON (default: the packaged campus_default.json)")
     parser.add_argument("--buildings", type=int, help="use a synthetic campus with N buildings instead")
     parser.add_argument("--steps", type=int, help="number of 15-min market cycles (default: whole horizon)")
     parser.add_argument("--supply-kw", type=float,

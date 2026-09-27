@@ -2,7 +2,7 @@
 
 Everything campus-specific (buildings, capacities, load ratios, profiles,
 forecaster, priority weights, pricing, seed, resolution) lives in a JSON
-file such as ``configs/campus_default.json``. Adding "Hostel D" or a
+file such as the packaged ``gridweave/config/campus_default.json``. Adding "Hostel D" or a
 100-building campus is a config change, never a code change.
 """
 from __future__ import annotations
@@ -11,6 +11,7 @@ import json
 import os
 from dataclasses import dataclass, field
 from datetime import datetime
+from importlib import resources
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -20,8 +21,14 @@ from gridweave.models.building import BuildingSpec, BuildingType
 from gridweave.simulation.profiles import DemandProfile, get_profile
 from gridweave.utils.validation import ValidationError
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_CONFIG_PATH = REPO_ROOT / "configs" / "campus_default.json"
+#: The default campus ships *inside* the package (package data), so it is
+#: available after a plain ``pip install .`` as well as an editable install.
+DEFAULT_CONFIG_RESOURCE = "campus_default.json"
+
+
+def default_config_text() -> str:
+    """Contents of the packaged default campus config (copy it to start your own)."""
+    return resources.files("gridweave.config").joinpath(DEFAULT_CONFIG_RESOURCE).read_text()
 
 
 @dataclass(frozen=True)
@@ -159,15 +166,17 @@ def campus_from_dict(data: Mapping[str, Any]) -> CampusConfig:
 
 def load_campus_config(path: str | Path | None = None) -> CampusConfig:
     """Load a campus config. Resolution order: ``path`` argument, then the
-    ``GRIDWEAVE_CONFIG`` environment variable, then the bundled default.
+    ``GRIDWEAVE_CONFIG`` environment variable, then the packaged default.
+    Relative paths are resolved against the current working directory.
     ``GRIDWEAVE_SEED`` (if set) overrides the configured seed."""
-    path = Path(path or os.environ.get("GRIDWEAVE_CONFIG") or DEFAULT_CONFIG_PATH)
-    if not path.is_absolute() and not path.exists():
-        path = REPO_ROOT / path
-    try:
-        data = json.loads(path.read_text())
-    except FileNotFoundError as exc:
-        raise ValidationError(f"campus config not found: {path}") from exc
+    chosen = path or os.environ.get("GRIDWEAVE_CONFIG")
+    if chosen:
+        try:
+            data = json.loads(Path(chosen).read_text())
+        except FileNotFoundError as exc:
+            raise ValidationError(f"campus config not found: {Path(chosen).resolve()}") from exc
+    else:
+        data = json.loads(default_config_text())
     cfg = campus_from_dict(data)
     if os.environ.get("GRIDWEAVE_SEED"):
         cfg = cfg.with_seed(int(os.environ["GRIDWEAVE_SEED"]))
