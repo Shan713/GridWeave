@@ -33,7 +33,7 @@ from gridweave.forecasting.ewma import EWMAForecaster
 from gridweave.models.allocation import Allocation, AllocationOutcome
 from gridweave.models.bid import Bid
 from gridweave.models.building import BuildingSpec
-from gridweave.models.common import DEFAULT_RESOLUTION_MINUTES, TimeSlot
+from gridweave.models.common import DEFAULT_RESOLUTION_MINUTES, MissingSlotError, TimeSlot, require_aligned
 from gridweave.models.context import BidContext
 from gridweave.models.demand import DemandSample, DemandState, LoadClassification, Observation
 from gridweave.utils.validation import ValidationError, require_fraction
@@ -170,10 +170,17 @@ class BuildingAgent(BaseAgent):
             raise ValidationError(
                 f"observation for {observation.building_id!r} sent to agent {self.building_id!r}"
             )
+        require_aligned(observation.timestamp, self.resolution_minutes)
         if self._history and observation.timestamp <= self._history[-1].timestamp:
             raise ValidationError(
                 f"observations must be strictly increasing in time: {observation.timestamp} "
                 f"after {self._history[-1].timestamp}"
+            )
+        if self._history and observation.timestamp != self._history[-1].timestamp + self.step:
+            raise MissingSlotError(
+                f"{self.building_id}: expected the observation for {self._history[-1].timestamp + self.step}, "
+                f"got {observation.timestamp}. Every slot must be reported; impute a missing meter reading "
+                f"upstream (and flag it in Observation.metadata) rather than skipping it."
             )
         anomaly = bool(
             self.spike_detector

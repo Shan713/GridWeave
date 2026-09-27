@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from statistics import fmean, pstdev
 from typing import Sequence
 
+from gridweave.models.common import MissingSlotError
 from gridweave.models.demand import DemandSample
 from gridweave.utils.validation import ValidationError, require_fraction, require_non_negative
 
@@ -99,6 +100,7 @@ class BaseForecaster(ABC):
                 f"{self.name} needs >= {self.min_history} samples, got {len(history)}"
             )
         step = self._step(history, resolution_minutes)
+        self._require_regular(history, step)
         values = [s.demand_kw for s in history]
         preds = [max(0.0, float(v)) for v in self._predict(values, horizon)]
         if len(preds) != horizon:
@@ -128,6 +130,18 @@ class BaseForecaster(ABC):
             volatility = sigma / mu
         history_factor = min(1.0, len(values) / max(1, self.ideal_history))
         return round(history_factor / (1.0 + volatility * math.sqrt(steps_ahead)), 6)
+
+    @staticmethod
+    def _require_regular(history: Sequence[DemandSample], step: timedelta) -> None:
+        """Every model here indexes history by position (e.g. "96 samples ago"
+        means "same slot yesterday"), which is only correct for a gap-free,
+        evenly spaced series. Irregular input is rejected, not silently used."""
+        for prev, cur in zip(history, history[1:]):
+            if cur.timestamp - prev.timestamp != step:
+                raise MissingSlotError(
+                    f"history is not regular at {cur.timestamp.isoformat()}: expected step {step}, "
+                    f"got {cur.timestamp - prev.timestamp}"
+                )
 
     @staticmethod
     def _step(history: Sequence[DemandSample], resolution_minutes: int | None) -> timedelta:
