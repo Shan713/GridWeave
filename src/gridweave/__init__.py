@@ -9,3 +9,9 @@ coordinator (P4) workstreams build against.
 """
 
 __version__ = "0.1.0"
+
+import logging as _logging
+
+# Library best practice: stay silent unless the application configures logging
+# (scripts do, via gridweave.utils.logging.configure).
+_logging.getLogger("gridweave").addHandler(_logging.NullHandler())

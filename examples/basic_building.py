@@ -1,4 +1,4 @@
-"""Minimal example: one Building Agent, hand-fed observations, one market cycle.
+"""Minimal example: one Building Agent, hand-fed observations, one settled market cycle.
 
 Run: python examples/basic_building.py
 """
@@ -16,9 +16,9 @@ spec = BuildingSpec(
     critical_fraction=0.6,       # 60 % of demand is critical ...
     deferrable_fraction=1.0,     # ... and all unmet flexible load is deferred
 )
-agent = BuildingAgent(spec)      # default forecaster: EWMA
+agent = BuildingAgent(spec)      # default forecaster: EWMA (a statistical baseline, not ML)
 
-# 1. observe: the environment reports measured demand every 15 minutes
+# 1. observe: the environment reports realised demand every 15 minutes
 t = datetime(2026, 1, 5, 18, 0)
 for i, kw in enumerate([34.0, 37.0, 39.5, 41.0]):
     agent.observe(Observation("hostel_a", t + i * timedelta(minutes=15), kw))
@@ -27,15 +27,19 @@ for i, kw in enumerate([34.0, 37.0, 39.5, 41.0]):
 bid = agent.generate_bid()
 print(f"Bid {bid.bid_id} for slot {bid.time_slot}")
 print(f"  requested {bid.requested_power_kw:.1f} kW  (critical {bid.critical_power_kw:.1f}, "
-      f"flexible {bid.flexible_power_kw:.1f}, minimum {bid.minimum_power_kw:.1f})")
+      f"flexible {bid.flexible_power_kw:.1f}, minimum {bid.minimum_power_kw:.1f}, capacity {bid.capacity_kw:.0f})")
 print(f"  priority {bid.priority_score:.3f}  willingness to pay {bid.willingness_to_pay:.2f}/kWh "
       f"(max {bid.maximum_price:.2f})")
 print(f"  priority factors: {bid.explanation['priority']['factors']}")
 
-# 7-8. the auction (P2) grants less than requested; the agent responds
-outcome = agent.apply_allocation(Allocation(bid.bid_id, "hostel_a", bid.time_slot, 32.0, clearing_price=7.5))
-print(f"\nAllocated {outcome.allocated_kw:.1f} kW -> status {outcome.status.value}")
-print(f"  critical served  {outcome.critical_served_kw:.1f} kW (shortfall {outcome.critical_shortfall_kw:.1f})")
-print(f"  flexible served  {outcome.flexible_served_kw:.1f} kW")
-print(f"  flexible deferred {outcome.flexible_deferred_kw:.1f} kW, curtailed {outcome.flexible_curtailed_kw:.1f} kW")
-print(f"  backlog carried to next slot: {agent.backlog_kw:.1f} kW; cost {outcome.energy_cost:.2f}")
+# 7. the market (P2) grants 32 kW; 8. the slot happens and demand turns out to be 44 kW
+allocation = Allocation(bid.bid_id, "hostel_a", bid.time_slot, 32.0, clearing_price=7.5)
+s = agent.settle(allocation, Observation("hostel_a", bid.time_slot.start, 44.0))
+print(f"\nForecast {s.forecast_demand_kw:.1f} kW, actual {s.actual_demand_kw:.1f} kW "
+      f"(error {s.forecast_error_kw:+.1f}), allocated {s.allocated_kw:.1f} kW -> status {s.status.value}")
+print(f"  critical: needed {s.actual_critical_kw:.1f}, served {s.critical_served_kw:.1f}, "
+      f"shortfall {s.critical_shortfall_kw:.1f} kW")
+print(f"  flexible: served {s.new_flexible_served_kw:.1f}, deferred {s.deferred_kw:.1f}, "
+      f"curtailed {s.curtailed_kw:.1f} kW")
+print(f"  deferred energy queued: {agent.backlog_energy_kwh:.2f} kWh (must be served within "
+      f"{spec.max_deferral_slots} slots); cost {s.energy_cost:.2f}")

@@ -1,35 +1,44 @@
-"""Full loop against the mocks, written out step by step (what P4 will automate).
+"""One market cycle written out step by step (what P4 will automate).
 
 Run: python examples/mock_market_cycle.py
 """
-from gridweave.bidding import BidContext
 from gridweave.config import load_campus_config
+from gridweave.contracts import validate_clearing, validate_dispatch
 from gridweave.factory import build_agents, build_simulators
-from gridweave.mocks import MockAuctioneer, MockGrid
+from gridweave.mocks import MockAuctioneer, MockSupply
+from gridweave.models import BidContext
 
 cfg = load_campus_config()
-agents, sims = build_agents(cfg), build_simulators(cfg)
-auction, grid = MockAuctioneer(), MockGrid(330)       # tight supply to force demand response
+agents, envs = build_agents(cfg), build_simulators(cfg)
+supply, auction = MockSupply.from_config(cfg.supply), MockAuctioneer()
 
-for cycle in range(20 * 4 + 1):                         # run up to the 20:15 slot
-    for building_id, sim in sims.items():
-        agents[building_id].observe(sim.step())         # 1. observe
-    slot = next(iter(agents.values())).next_slot()
-    supply = grid.available_power_kw(slot)
-    bids = {i: a.generate_bid(BidContext(slot)) for i, a in agents.items()}          # 2. bid
-    requested = sum(b.requested_power_kw for b in bids.values())
-    scarcity = max(0.0, 1 - supply / requested) if requested else 0.0
-    if scarcity > 0:                                                                  # 3. re-bid
-        bids = {i: a.generate_bid(BidContext(slot, scarcity=scarcity)) for i, a in agents.items()}
-    for b in bids.values():
-        auction.submit_bid(b)                                                         # 4. auction
-    allocations = auction.clear(slot, supply)
-    outcomes = {al.building_id: agents[al.building_id].apply_allocation(al) for al in allocations}  # 5. respond
+for _ in range(20 * 4 + 1):                               # observe Monday 00:00 .. 20:00 (no market)
+    for building_id, env in envs.items():
+        agents[building_id].observe(env.step())
 
-print(f"Slot {slot}: supply {supply:.0f} kW, requested {requested:.0f} kW, scarcity {scarcity:.2f}\n")
-print(f"{'building':<16}{'req':>7}{'crit':>7}{'prio':>7}{'wtp':>7}{'alloc':>8}  status            deferred  backlog")
-for i, o in outcomes.items():
-    b = bids[i]
-    print(f"{i:<16}{b.requested_power_kw:>7.1f}{b.critical_power_kw:>7.1f}{b.priority_score:>7.3f}"
-          f"{b.willingness_to_pay:>7.2f}{o.allocated_kw:>8.1f}  {o.status.value:<18}"
-          f"{o.flexible_deferred_kw:>7.1f}{agents[i].backlog_kw:>8.1f}")
+slot = agents["hostel_a"].next_slot()                     # the 20:15 slot
+offers = supply.offers(slot)                              # 1. P3 offers
+available = sum(o.available_kw for o in offers)
+bids = {i: a.generate_bid(BidContext(slot)) for i, a in agents.items()}              # 2. P1 bids
+first = sum(b.requested_power_kw for b in bids.values())
+scarcity = max(0.0, 1 - available / first) if first else 0.0
+if scarcity > 0:                                          # 3. demand-response round
+    bids = {i: a.generate_bid(BidContext(slot, scarcity=scarcity)) for i, a in agents.items()}
+clearing = auction.clear(slot, list(bids.values()), offers)                           # 4. P2 clears
+validate_clearing(clearing, list(bids.values()), offers)
+results = supply.dispatch(clearing.dispatch)                                          # 5. P3 dispatches
+validate_dispatch(clearing.dispatch, results)
+allocations = {a.building_id: a for a in clearing.allocations}
+settlements = {i: agents[i].settle(allocations[i], envs[i].step()) for i in agents}   # 6. realised + settle
+
+print(f"Slot {slot}")
+print("offers:   " + ", ".join(f"{o.source_id} {o.available_kw:.0f} kW @ {o.marginal_price:.0f}" for o in offers))
+print("dispatch: " + ", ".join(f"{r.source_id} {r.delivered_kw:.1f} kW" + (f" (SOC -> {r.state['soc']:.2f})"
+                                                                              if 'soc' in r.state else "")
+                               for r in results))
+print(f"requested {first:.0f} kW -> {sum(b.requested_power_kw for b in bids.values()):.0f} kW after the "
+      f"demand-response round (scarcity {scarcity:.2f}); supply {available:.0f} kW\n")
+print(f"{'building':<16}{'forecast':>9}{'actual':>8}{'req':>7}{'alloc':>7}{'served':>8}  {'status':<19}{'deferred':>8}")
+for i, s in settlements.items():
+    print(f"{i:<16}{s.forecast_demand_kw:>9.1f}{s.actual_demand_kw:>8.1f}{s.requested_kw:>7.1f}{s.allocated_kw:>7.1f}"
+          f"{s.served_kw:>8.1f}  {s.status.value:<19}{s.deferred_kw:>8.1f}")
