@@ -1,0 +1,4 @@
+# Core library has no third-party runtime dependencies.
+# Install the package in editable mode together with the dev tools:
+#   pip install -r requirements.txt
+-e .[dev]
