@@ -12,6 +12,7 @@ from gridweave.models.common import (
 )
 from gridweave.models.context import BidContext
 from gridweave.models.demand import DemandSample, DemandState, LoadClassification, Observation
+from gridweave.models.supply import ClearingResult, DispatchRequest, DispatchResult, SourceType, SupplyOffer
 
 __all__ = [
     "Allocation",
@@ -22,6 +23,9 @@ __all__ = [
     "BidContext",
     "BuildingSpec",
     "BuildingType",
+    "ClearingResult",
+    "DispatchRequest",
+    "DispatchResult",
     "DEFAULT_RESOLUTION_MINUTES",
     "DemandSample",
     "DemandState",
@@ -29,6 +33,8 @@ __all__ = [
     "MisalignedTimestampError",
     "MissingSlotError",
     "Observation",
+    "SourceType",
+    "SupplyOffer",
     "TimeSlot",
     "is_aligned",
     "require_aligned",
