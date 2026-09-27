@@ -85,11 +85,6 @@ class AllocationStatus(str, Enum):
     CRITICAL_SHORTFALL = "critical_shortfall"  # 0 < accepted < critical
     NONE = "none"                              # accepted == 0 < requested
 
-    @property
-    def is_safety_event(self) -> bool:
-        """True when critical load was not fully served."""
-        return self in (AllocationStatus.CRITICAL_SHORTFALL, AllocationStatus.NONE)
-
 
 @dataclass(frozen=True)
 class AllocationOutcome:
@@ -144,6 +139,11 @@ class AllocationOutcome:
                       "accepted_kw", self.accepted_kw)
 
     @property
+    def has_critical_shortfall(self) -> bool:
+        """Safety event: some critical load could not be served."""
+        return self.critical_shortfall_kw > POWER_TOLERANCE_KW
+
+    @property
     def minimum_met(self) -> bool:
         return self.accepted_kw + POWER_TOLERANCE_KW >= self.minimum_kw
 
@@ -157,5 +157,6 @@ class AllocationOutcome:
         data["time_slot"] = self.time_slot.to_dict()
         data["status"] = self.status.value
         data["minimum_met"] = self.minimum_met
+        data["has_critical_shortfall"] = self.has_critical_shortfall
         data["satisfaction_ratio"] = self.satisfaction_ratio
         return data
