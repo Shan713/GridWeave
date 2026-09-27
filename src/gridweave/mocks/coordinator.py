@@ -13,10 +13,21 @@ One ``run_step`` is one slot::
     settle   = agent.settle(allocation, realised)            P1
     env.apply_settlement(settle)                             closed loop
 
-On any auction/dispatch failure or contract violation, the policy decides:
-``"settle_zero"`` (default) settles every agent with a zero allocation (no
-power was cleared, so shortfalls are reported honestly and no agent stays
-``bid_pending``); ``"raise"`` aborts every pending bid and re-raises.
+Failure handling (no agent is ever left ``bid_pending``):
+
+* **Market or dispatch failure / contract violation** (before any realised
+  demand is revealed). ``on_failure`` decides: ``"settle_zero"`` (default)
+  settles every agent with a zero allocation (no power was cleared, so
+  shortfalls are reported honestly); ``"raise"`` aborts every pending bid and
+  re-raises. Environments have not advanced, so the same slot can be re-run.
+* **Settlement failure** (``env.step()`` or ``agent.settle`` raises, e.g. the
+  environment reports demand above a building's capacity). This is a data
+  error, never swallowed and independent of ``on_failure``. Every other agent
+  is still settled normally; each failed agent's bid is aborted and the slot
+  is reported to it with a carried-forward observation flagged
+  ``{"imputed": True}`` (excluded from settlement statistics), so all agents
+  stay synchronised and usable. The step is recorded, then
+  :class:`SettlementError` is raised, chained to the first original error.
 """
 from __future__ import annotations
 
@@ -30,12 +41,27 @@ from gridweave.models.allocation import Allocation
 from gridweave.models.bid import Bid
 from gridweave.models.common import TimeSlot
 from gridweave.models.context import BidContext
+from gridweave.models.demand import Observation
 from gridweave.models.settlement import Settlement
 from gridweave.models.supply import ClearingResult, DispatchResult, SupplyOffer
 from gridweave.utils.logging import get_logger
 from gridweave.utils.validation import ValidationError, clamp
 
 log = get_logger("mocks.coordinator")
+
+
+class SettlementError(RuntimeError):
+    """One or more agents could not be settled for a slot.
+
+    ``record`` is the (already recorded) step; ``failures`` maps building id to
+    the original exception. The first original exception is ``__cause__``.
+    """
+
+    def __init__(self, record: "StepRecord", failures: dict[str, BaseException]) -> None:
+        self.record = record
+        self.failures = failures
+        detail = "; ".join(f"{k}: {type(e).__name__}: {e}" for k, e in failures.items())
+        super().__init__(f"settlement failed for slot {record.time_slot}: {detail}")
 
 
 @dataclass
@@ -50,6 +76,7 @@ class StepRecord:
     dispatch_results: list[DispatchResult] = field(default_factory=list)
     settlements: dict[str, Settlement] = field(default_factory=dict)
     failure: str | None = None
+    settlement_failures: dict[str, str] = field(default_factory=dict)
 
     @property
     def supply_kw(self) -> float:
@@ -82,6 +109,7 @@ class StepRecord:
             "actual_demand_kw": self.actual_demand_kw,
             "served_kw": self.served_kw,
             "failure": self.failure,
+            "settlement_failures": dict(self.settlement_failures),
             "offers": [o.to_dict() for o in self.offers],
             "clearing": self.clearing.to_dict() if self.clearing else None,
             "dispatch_results": [r.to_dict() for r in self.dispatch_results],
@@ -180,15 +208,41 @@ class MockCoordinator:
             allocations = {i: Allocation(b.bid_id, i, slot, 0.0, metadata={"failure": record.failure})
                            for i, b in bids.items()}
 
+        failures: dict[str, BaseException] = {}
         for building_id, agent in self.agents.items():
             env = self.environments[building_id]
-            settlement = agent.settle(allocations[building_id], env.step())
-            env.apply_settlement(settlement)
-            record.settlements[building_id] = settlement
+            try:
+                settlement = agent.settle(allocations[building_id], env.step())
+                env.apply_settlement(settlement)
+                record.settlements[building_id] = settlement
+            except Exception as exc:  # noqa: BLE001 - recorded, recovered, and re-raised below
+                failures[building_id] = exc
+                record.settlement_failures[building_id] = f"{type(exc).__name__}: {exc}"
+                self._recover(agent, slot, record.settlement_failures[building_id])
         self.steps_run += 1
         if self.keep_records:
             self.records.append(record)
+        if failures:
+            self.failures += 1
+            log.error("slot %s: settlement failed for %s", slot, sorted(failures))
+            raise SettlementError(record, failures) from next(iter(failures.values()))
         return record
+
+    @staticmethod
+    def _recover(agent: Any, slot: TimeSlot, reason: str) -> None:
+        """Return an agent whose slot could not be settled to a usable, synchronised state.
+
+        The pending bid is aborted (no settlement is fabricated). If the slot is
+        not yet in the agent's history, it is reported with the last observed
+        value, flagged as imputed. Imputation is this reference coordinator's
+        (P4's) policy; P1 only requires that every slot be reported.
+        """
+        if agent.pending_bid is not None:
+            agent.abort_bid(reason)
+        last = agent.history[-1]
+        if last.timestamp < slot.start:
+            agent.observe(Observation(agent.building_id, slot.start, last.demand_kw,
+                                      metadata={"imputed": True, "reason": reason}))
 
     def run(self, steps: int | None = None) -> list[StepRecord]:
         done = 0

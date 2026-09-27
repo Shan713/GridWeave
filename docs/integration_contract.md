@@ -227,8 +227,19 @@ for building_id, agent in agents.items():
 
 **Phase rules** (violations raise `AgentStateError`): no bid before the first observation; no bid for a
 different slot while one is pending; the pending slot must be closed with `settle` (or `abort_bid`),
-not `observe`. The reference coordinator settles every agent with a zero allocation if the market or
-dispatch fails or violates the contract (`on_failure="settle_zero"`), so no agent is left `bid_pending`.
+not `observe`. A `settle` that raises a validation error (e.g. realised demand above capacity, wrong
+slot) changes nothing: the agent stays `bid_pending` with its bid intact until the coordinator acts.
+
+**Failure recovery in the reference coordinator** (`MockCoordinator`; P4 may choose other policies,
+but must never leave an agent `bid_pending`):
+
+| Failure | When | Reference behaviour |
+|---|---|---|
+| Market or dispatch failure, contract violation | before realised demand is revealed | `on_failure="settle_zero"`: every agent settles with a zero allocation. `"raise"`: every bid is aborted, then the error is re-raised; environments have not advanced, so the same slot can be re-run |
+| Settlement failure (`env.step()` or `agent.settle` raises, e.g. demand above capacity) | after realised demand | Never swallowed. All other agents are settled normally. Each failed agent's bid is aborted and the slot is reported to it with a carried-forward observation flagged `{"imputed": True}` (no settlement is fabricated). The step is recorded with `settlement_failures`, then `SettlementError` is raised, chained to the original error |
+
+After either path, every agent is `observed` or `settled` and synchronised on the same slot, so the
+next cycle runs normally (tested in `tests/unit/test_coordinator.py`).
 
 ---
 

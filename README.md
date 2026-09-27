@@ -11,6 +11,9 @@ curtails what could not be served, and carries the consequences into the next sl
 This repository contains **Workstream 1: Building Intelligence & Demand Management**, plus the
 contracts, protocols and mocks that the other three workstreams build against.
 
+**P1 status: SEALED** at contract version 2.0 (bid schema 1.1). See [docs/P1_FREEZE.md](docs/P1_FREEZE.md)
+for the frozen contract, the ownership boundaries and the change policy.
+
 | Workstream | Owner | Scope | Status |
 |---|---|---|---|
 | 1 | P1 | Building agents, demand simulation, forecasting, load classification, priority, bid generation, settlement, local response | **Implemented (this repo)** |
@@ -159,7 +162,7 @@ methods. They are not a general claim about which model is best. Full tables and
 ## 9. Testing
 
 ```bash
-pytest                                   # 292 tests: unit + integration + runnable doc examples
+pytest                                   # 304 tests: unit + integration + runnable doc examples
 pytest --cov=gridweave                   # coverage
 ruff check src tests scripts examples    # lint
 ```

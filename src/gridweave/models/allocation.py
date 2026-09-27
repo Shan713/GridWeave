@@ -1,4 +1,5 @@
-"""Allocation (auction -> building) and AllocationOutcome (building's response)."""
+"""Allocation (auction -> building) and AllocationOutcome (ex-ante preview of an
+allocation against its bid; service outcomes are in :class:`gridweave.models.Settlement`)."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
