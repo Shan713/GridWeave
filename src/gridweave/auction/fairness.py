@@ -5,9 +5,8 @@ priority boosts to ensure that low-budget buildings are not perpetually starved.
 """
 from __future__ import annotations
 
-import math
-from dataclasses import dataclass, field
-from typing import Mapping, Sequence
+from dataclasses import dataclass
+from typing import Sequence
 
 
 def jains_fairness_index(values: Sequence[float]) -> float:

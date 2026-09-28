@@ -6,7 +6,7 @@ clearing result.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Mapping, Sequence
+from typing import Sequence
 
 from gridweave.auction.fairness import jains_fairness_index
 from gridweave.models.allocation import Allocation

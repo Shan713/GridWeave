@@ -115,12 +115,16 @@ class MarketResult:
         lines = [
             f"=== Market Clearing Summary [{self.time_slot}] ===",
             f"Strategy: {self.strategy_name} | Clearing Price: {self.clearing_price or 'N/A'}",
-            f"Requested: {self.metrics.total_requested_kw:.2f} kW | Allocated: {self.metrics.total_allocated_kw:.2f} kW "
-            f"| Unmet: {self.metrics.total_unmet_kw:.2f} kW | Critical Shortfall: {self.metrics.critical_shortfall_kw:.2f} kW",
-            f"Fairness (Jain's): {self.metrics.jains_fairness_index:.4f} | Service Ratio: {self.metrics.service_ratio:.2%} "
+            f"Requested: {self.metrics.total_requested_kw:.2f} kW "
+            f"| Allocated: {self.metrics.total_allocated_kw:.2f} kW "
+            f"| Unmet: {self.metrics.total_unmet_kw:.2f} kW "
+            f"| Critical Shortfall: {self.metrics.critical_shortfall_kw:.2f} kW",
+            f"Fairness (Jain's): {self.metrics.jains_fairness_index:.4f} "
+            f"| Service Ratio: {self.metrics.service_ratio:.2%} "
             f"| Utilization: {self.metrics.supply_utilization:.2%}",
             "",
-            f"{'Building':<16} {'Req (kW)':<10} {'Crit (kW)':<10} {'Alloc (kW)':<12} {'Score':<8} {'WTP':<8} {'Explanation'}",
+            f"{'Building':<16} {'Req (kW)':<10} {'Crit (kW)':<10} "
+            f"{'Alloc (kW)':<12} {'Score':<8} {'WTP':<8} {'Explanation'}",
             "-" * 95,
         ]
         for t in self.decision_traces:

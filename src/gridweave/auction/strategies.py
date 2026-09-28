@@ -14,12 +14,11 @@ from typing import Any, Mapping, Protocol, Sequence, runtime_checkable
 
 from gridweave.auction.constraints import EmergencyPolicy, EmergencyPolicyType
 from gridweave.auction.result import DecisionTrace
-from gridweave.auction.scoring import BidScorer, ScoreBreakdown
+from gridweave.auction.scoring import BidScorer
 from gridweave.models.allocation import Allocation
 from gridweave.models.bid import Bid
 from gridweave.models.common import TimeSlot
 from gridweave.models.supply import DispatchRequest, SupplyOffer
-from gridweave.utils.validation import POWER_TOLERANCE_KW
 
 
 @dataclass(frozen=True)
@@ -212,7 +211,8 @@ class GreedyAllocationStrategy:
                     deferred = b.requested_power_kw - tot
                     reasons[b.bid_id] = (
                         f"Critical & min operational satisfied ({b.minimum_power_kw:.1f} kW). "
-                        f"{give_flex:.1f}/{flex_need:.1f} kW flexible served (score {score_val:.3f}); {deferred:.1f} kW deferred."
+                        f"{give_flex:.1f}/{flex_need:.1f} kW flexible served "
+                        f"(score {score_val:.3f}); {deferred:.1f} kW deferred."
                     )
                 else:
                     reasons[b.bid_id] = (
@@ -384,17 +384,20 @@ class OptimizedAllocationStrategy:
                 if tot >= b.requested_power_kw - 1e-6:
                     reasons[b.bid_id] = (
                         f"Globally optimal allocation: 100% request satisfied ({tot:.1f} kW). "
-                        f"Critical: {c_kw:.1f} kW, Min floor: {m_kw:.1f} kW, Flexible: {f_kw:.1f} kW (score {score_val:.3f})."
+                        f"Critical: {c_kw:.1f} kW, Min floor: {m_kw:.1f} kW, "
+                        f"Flexible: {f_kw:.1f} kW (score {score_val:.3f})."
                     )
                 elif tot >= b.minimum_power_kw - 1e-6:
                     def_kw = b.requested_power_kw - tot
                     reasons[b.bid_id] = (
                         f"Critical and operational floor guaranteed ({b.minimum_power_kw:.1f} kW). "
-                        f"Optimal flexible allocation: {f_kw:.1f} kW served, {def_kw:.1f} kW deferred (score {score_val:.3f})."
+                        f"Optimal flexible allocation: {f_kw:.1f} kW served, "
+                        f"{def_kw:.1f} kW deferred (score {score_val:.3f})."
                     )
                 else:
                     reasons[b.bid_id] = (
-                        f"Critical guaranteed ({c_kw:.1f} kW). Partial minimum floor ({tot:.1f}/{b.minimum_power_kw:.1f} kW) "
+                        f"Critical guaranteed ({c_kw:.1f} kW). Partial minimum floor "
+                        f"({tot:.1f}/{b.minimum_power_kw:.1f} kW) "
                         f"allocated by social utility maximization."
                     )
 
@@ -525,7 +528,10 @@ class ProportionalAllocationStrategy:
                     willingness_to_pay=b.willingness_to_pay,
                     composite_score=0.0,
                     clearing_price=price,
-                    reason=f"Uncoordinated proportional rationing ({ratio:.1%} of requested {b.requested_power_kw:.1f} kW).",
+                    reason=(
+                        f"Uncoordinated proportional rationing "
+                        f"({ratio:.1%} of requested {b.requested_power_kw:.1f} kW)."
+                    ),
                 )
             )
 
@@ -579,7 +585,10 @@ class PriorityAllocationStrategy:
             granted[b.bid_id] = give
             remaining -= give
             if give >= b.requested_power_kw - 1e-6:
-                reasons[b.bid_id] = f"Full request granted ({give:.1f} kW) based on high priority ({b.priority_score:.2f})."
+                reasons[b.bid_id] = (
+                    f"Full request granted ({give:.1f} kW) based on high priority "
+                    f"({b.priority_score:.2f})."
+                )
             elif give > 0:
                 reasons[b.bid_id] = (
                     f"Partial allocation ({give:.1f}/{b.requested_power_kw:.1f} kW) as supply was exhausted "

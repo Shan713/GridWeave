@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Mapping, Sequence
+from typing import Sequence
 
 from gridweave.models.bid import Bid
 from gridweave.models.common import TimeSlot
@@ -100,11 +100,13 @@ class BidValidator:
         # Ordering invariants
         if bid.critical_power_kw > bid.minimum_power_kw + self.tolerance_kw:
             errors.append(
-                f"Bid {bid.bid_id}: critical power ({bid.critical_power_kw:.3f}) exceeds minimum ({bid.minimum_power_kw:.3f})"
+                f"Bid {bid.bid_id}: critical power ({bid.critical_power_kw:.3f}) "
+                f"exceeds minimum ({bid.minimum_power_kw:.3f})"
             )
         if bid.minimum_power_kw > bid.requested_power_kw + self.tolerance_kw:
             errors.append(
-                f"Bid {bid.bid_id}: minimum power ({bid.minimum_power_kw:.3f}) exceeds requested ({bid.requested_power_kw:.3f})"
+                f"Bid {bid.bid_id}: minimum power ({bid.minimum_power_kw:.3f}) "
+                f"exceeds requested ({bid.requested_power_kw:.3f})"
             )
 
         # Power balance
@@ -132,7 +134,8 @@ class BidValidator:
         if bid.capacity_kw is not None:
             if bid.requested_power_kw > bid.capacity_kw + self.tolerance_kw:
                 errors.append(
-                    f"Bid {bid.bid_id}: requested power ({bid.requested_power_kw:.3f}) exceeds capacity ({bid.capacity_kw:.3f})"
+                    f"Bid {bid.bid_id}: requested power ({bid.requested_power_kw:.3f}) "
+                    f"exceeds capacity ({bid.capacity_kw:.3f})"
                 )
 
         # Revision check

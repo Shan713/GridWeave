@@ -12,7 +12,7 @@ from gridweave.config import load_campus_config
 from gridweave.contracts import validate_clearing
 from gridweave.factory import build_agents, build_simulators
 from gridweave.interfaces import Auctioneer
-from gridweave.mocks import MockCoordinator, MockGrid, MockSupply, summarise
+from gridweave.mocks import MockCoordinator, MockSupply
 from gridweave.models import BidContext
 
 

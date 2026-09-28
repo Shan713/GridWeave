@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import time
 import tracemalloc
-from datetime import datetime
 from pathlib import Path
 
 from gridweave.auction import (
@@ -21,7 +20,6 @@ from gridweave.auction import (
 from gridweave.config import synthetic_campus
 from gridweave.factory import build_agents, build_simulators
 from gridweave.models.bid import Bid
-from gridweave.models.common import TimeSlot
 from gridweave.models.context import BidContext
 from gridweave.models.supply import SourceType, SupplyOffer
 

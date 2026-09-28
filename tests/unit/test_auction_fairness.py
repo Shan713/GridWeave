@@ -1,8 +1,6 @@
 """Unit tests for P2 FairnessTracker and Jain's Fairness Index."""
 from __future__ import annotations
 
-import pytest
-
 from gridweave.auction.fairness import FairnessTracker, jains_fairness_index
 
 

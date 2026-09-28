@@ -12,7 +12,6 @@ and prints formatted comparative performance tables for Review 1 & Review 2 eval
 from __future__ import annotations
 
 import json
-import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Sequence
@@ -24,8 +23,6 @@ from gridweave.auction import (
     PriorityAllocationStrategy,
     ProportionalAllocationStrategy,
 )
-from gridweave.auction.fairness import FairnessTracker
-from gridweave.auction.scoring import BidScorer
 from gridweave.models.bid import Bid
 from gridweave.models.common import TimeSlot
 from gridweave.models.supply import SourceType, SupplyOffer
@@ -191,9 +188,12 @@ def main() -> None:
         SupplyOffer("grid", SourceType.GRID, slot2, 80.0, 10.0),
         SupplyOffer("solar", SourceType.SOLAR, slot2, 20.0, 0.0),
     ]  # 100 kW supply (30 kW shortage)
-    exp2 = run_scenario("Scenario 2: Moderate Shortage (Supply 100 kW vs 130 kW)",
-                        "Demand exceeds supply, but supply covers total critical load (88 kW). Critical loads must be protected.",
-                        bids2, offers2, slot2)
+    exp2 = run_scenario(
+        "Scenario 2: Moderate Shortage (Supply 100 kW vs 130 kW)",
+        "Demand exceeds supply, but supply covers total critical load (88 kW). "
+        "Critical loads must be protected.",
+        bids2, offers2, slot2,
+    )
     all_experiments.append(exp2)
 
     # -------------------------------------------------------------------------
@@ -232,9 +232,12 @@ def main() -> None:
         SupplyOffer("grid", SourceType.GRID, slot5, 75.0, 12.0),     # Peak grid tariff
         SupplyOffer("battery", SourceType.BATTERY, slot5, 35.0, 7.0), # Battery support
     ]  # 110 kW supply
-    exp5 = run_scenario("Scenario 5: Battery Peak Shaving Support",
-                        "Battery discharges at cheaper marginal price (7.0) to shave expensive peak grid tariff (12.0).",
-                        bids5, offers5, slot5)
+    exp5 = run_scenario(
+        "Scenario 5: Battery Peak Shaving Support",
+        "Battery discharges at cheaper marginal price (7.0) "
+        "to shave expensive peak grid tariff (12.0).",
+        bids5, offers5, slot5,
+    )
     all_experiments.append(exp5)
 
     # -------------------------------------------------------------------------
@@ -281,8 +284,7 @@ def main() -> None:
     # -------------------------------------------------------------------------
     slot8 = make_slot(18, 0)
     bids8_round1 = create_standard_bids(slot8)
-    offers8_round1 = [SupplyOffer("grid", SourceType.GRID, slot8, 100.0, 10.0)]
-    # First auction clears with 100 kW supply. Then supply drops to 80 kW, buildings revise bids under demand response.
+    # First auction clears with 100 kW supply.
     # Eng lab voluntary reduction of 3 kW flexible load:
     revised_bids8 = [
         bids8_round1[0],
@@ -306,9 +308,12 @@ def main() -> None:
         ),
     ]
     offers8_round2 = [SupplyOffer("grid", SourceType.GRID, slot8, 80.0, 10.0)]
-    exp8 = run_scenario("Scenario 8: Dynamic Re-Auction Round 2 (Demand Response Revised Bids)",
-                        "Re-auction with reduced supply (80 kW) and revised demand-response bids with voluntary reduction.",
-                        revised_bids8, offers8_round2, slot8)
+    exp8 = run_scenario(
+        "Scenario 8: Dynamic Re-Auction Round 2 (Demand Response Revised Bids)",
+        "Re-auction with reduced supply (80 kW) and revised demand-response bids "
+        "with voluntary reduction.",
+        revised_bids8, offers8_round2, slot8,
+    )
     all_experiments.append(exp8)
 
     # Save results to file
@@ -316,17 +321,24 @@ def main() -> None:
     with open(out_file, "w") as f:
         json.dump(all_experiments, f, indent=2)
 
-    print(f"-> Successfully executed 8 scenarios across 4 allocation strategies.")
+    print("-> Successfully executed 8 scenarios across 4 allocation strategies.")
     print(f"-> Saved complete machine-readable experimental dataset to: {out_file}\n")
 
     # Print summary comparative tables
     for exp in all_experiments:
-        print(f"--------------------------------------------------------------------------------")
+        print("--------------------------------------------------------------------------------")
         print(f" {exp['scenario_name']}")
         print(f" {exp['description']}")
-        print(f" Total Requested: {exp['total_requested_kw']} kW | Total Critical: {exp['total_critical_kw']} kW | Supply: {exp['total_supply_kw']} kW")
-        print(f"--------------------------------------------------------------------------------")
-        print(f"{'Strategy':<26} {'Alloc (kW)':<12} {'Unmet (kW)':<12} {'Crit Short':<12} {'Jain Index':<12} {'Cost':<10} {'Runtime (ms)'}")
+        print(
+            f" Total Requested: {exp['total_requested_kw']} kW "
+            f"| Total Critical: {exp['total_critical_kw']} kW "
+            f"| Supply: {exp['total_supply_kw']} kW"
+        )
+        print("--------------------------------------------------------------------------------")
+        print(
+            f"{'Strategy':<26} {'Alloc (kW)':<12} {'Unmet (kW)':<12} "
+            f"{'Crit Short':<12} {'Jain Index':<12} {'Cost':<10} {'Runtime (ms)'}"
+        )
         print("-" * 96)
         for s_name, data in exp["strategies"].items():
             print(f"{s_name:<26} {data['total_allocated_kw']:<12.2f} {data['total_unmet_kw']:<12.2f} "

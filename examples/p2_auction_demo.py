@@ -16,10 +16,8 @@ from datetime import datetime
 
 from gridweave.auction import (
     AuctionEngine,
-    GreedyAllocationStrategy,
     OptimizedAllocationStrategy,
 )
-from gridweave.contracts import validate_clearing
 from gridweave.models.bid import Bid
 from gridweave.models.common import TimeSlot
 from gridweave.models.supply import SourceType, SupplyOffer
@@ -37,8 +35,14 @@ def print_stage_results(engine: AuctionEngine, title: str) -> None:
     print_header(title)
     print(res.format_summary())
     print("\n[Audit Metrics]")
-    print(f"Total Dispatched: {res.total_dispatched_kw:.2f} kW | Supply Utilization: {res.metrics.supply_utilization:.1%}")
-    print(f"Critical Shortfall: {res.metrics.critical_shortfall_kw:.2f} kW | Jain's Fairness Index: {res.metrics.jains_fairness_index:.4f}")
+    print(
+        f"Total Dispatched: {res.total_dispatched_kw:.2f} kW "
+        f"| Supply Utilization: {res.metrics.supply_utilization:.1%}"
+    )
+    print(
+        f"Critical Shortfall: {res.metrics.critical_shortfall_kw:.2f} kW "
+        f"| Jain's Fairness Index: {res.metrics.jains_fairness_index:.4f}"
+    )
     print(f"Total Market Cost: INR {res.metrics.total_cost:.2f} | Execution Runtime: {res.metrics.runtime_ms:.3f} ms")
 
 

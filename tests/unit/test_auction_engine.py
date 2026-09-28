@@ -15,7 +15,6 @@ from gridweave.interfaces import Auctioneer
 from gridweave.models.bid import Bid
 from gridweave.models.common import TimeSlot
 from gridweave.models.supply import SourceType, SupplyOffer
-from gridweave.utils.validation import ValidationError
 
 
 @pytest.fixture

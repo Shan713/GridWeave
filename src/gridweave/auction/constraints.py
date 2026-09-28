@@ -85,7 +85,8 @@ class ConstraintValidator:
         total_dispatched = sum(dispatches.values())
         if abs(total_allocated - total_dispatched) > self.tolerance_kw:
             violations.append(
-                f"Energy imbalance: total allocated ({total_allocated:.4f} kW) != dispatched ({total_dispatched:.4f} kW)"
+                f"Energy imbalance: total allocated ({total_allocated:.4f} kW) "
+                f"!= dispatched ({total_dispatched:.4f} kW)"
             )
 
         return violations

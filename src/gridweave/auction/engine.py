@@ -7,27 +7,25 @@ from __future__ import annotations
 
 import time
 from enum import Enum
-from typing import Mapping, Sequence
+from typing import Sequence
 
 from gridweave.auction.constraints import ConstraintValidator
 from gridweave.auction.fairness import FairnessTracker
-from gridweave.auction.metrics import MarketMetrics, MarketMetricsCalculator
-from gridweave.auction.result import DecisionTrace, MarketResult
+from gridweave.auction.metrics import MarketMetricsCalculator
+from gridweave.auction.result import MarketResult
 from gridweave.auction.scoring import BidScorer
 from gridweave.auction.strategies import (
     AllocationStrategy,
     GreedyAllocationStrategy,
-    OptimizedAllocationStrategy,
     StrategyResult,
 )
-from gridweave.auction.validator import BidValidator, ValidationReport
+from gridweave.auction.validator import BidValidator
 from gridweave.contracts import validate_clearing
-from gridweave.interfaces import Auctioneer
 from gridweave.models.allocation import Allocation
 from gridweave.models.bid import Bid
 from gridweave.models.common import TimeSlot
 from gridweave.models.supply import ClearingResult, SupplyOffer
-from gridweave.utils.validation import POWER_TOLERANCE_KW, ValidationError
+from gridweave.utils.validation import ValidationError
 
 
 class MarketPhase(str, Enum):
@@ -230,7 +228,7 @@ class AuctionEngine:
         offers = list(self._active_offers.values())
 
         self.phase = MarketPhase.CLEARING
-        clearing_res = self.clear(self.current_slot, bids, offers)
+        self.clear(self.current_slot, bids, offers)
         self.phase = MarketPhase.SETTLED
 
         assert self.last_result is not None
