@@ -1,0 +1,618 @@
+[
+  {
+    "scenario_name": "Scenario 1: Abundant Supply (Supply > Demand)",
+    "description": "Supply (170 kW) exceeds demand (130 kW). All valid bids should be fully served.",
+    "total_requested_kw": 130.0,
+    "total_critical_kw": 88.0,
+    "total_supply_kw": 170.0,
+    "strategies": {
+      "ProportionalBaseline": {
+        "total_allocated_kw": 130.0,
+        "total_unmet_kw": 0.0,
+        "critical_shortfall_kw": 0.0,
+        "supply_utilization": 0.7647,
+        "service_ratio": 1.0,
+        "jains_fairness_index": 1.0,
+        "total_cost": 325.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.19,
+        "allocations_by_building": {
+          "hostel_a": 35.0,
+          "hostel_b": 30.0,
+          "hostel_c": 25.0,
+          "eng_lab": 40.0
+        }
+      },
+      "PriorityOnlyBaseline": {
+        "total_allocated_kw": 130.0,
+        "total_unmet_kw": 0.0,
+        "critical_shortfall_kw": 0.0,
+        "supply_utilization": 0.7647,
+        "service_ratio": 1.0,
+        "jains_fairness_index": 1.0,
+        "total_cost": 325.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.121,
+        "allocations_by_building": {
+          "hostel_a": 35.0,
+          "hostel_b": 30.0,
+          "hostel_c": 25.0,
+          "eng_lab": 40.0
+        }
+      },
+      "GreedyTieredAuction": {
+        "total_allocated_kw": 130.0,
+        "total_unmet_kw": 0.0,
+        "critical_shortfall_kw": 0.0,
+        "supply_utilization": 0.7647,
+        "service_ratio": 1.0,
+        "jains_fairness_index": 1.0,
+        "total_cost": 325.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.136,
+        "allocations_by_building": {
+          "hostel_a": 35.0,
+          "hostel_b": 30.0,
+          "hostel_c": 25.0,
+          "eng_lab": 40.0
+        }
+      },
+      "OptimizedWelfareAuction": {
+        "total_allocated_kw": 130.0,
+        "total_unmet_kw": 0.0,
+        "critical_shortfall_kw": 0.0,
+        "supply_utilization": 0.7647,
+        "service_ratio": 1.0,
+        "jains_fairness_index": 1.0,
+        "total_cost": 325.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.125,
+        "allocations_by_building": {
+          "hostel_a": 35.0,
+          "hostel_b": 30.0,
+          "hostel_c": 25.0,
+          "eng_lab": 40.0
+        }
+      }
+    }
+  },
+  {
+    "scenario_name": "Scenario 2: Moderate Shortage (Supply 100 kW vs 130 kW)",
+    "description": "Demand exceeds supply, but supply covers total critical load (88 kW). Critical loads must be protected.",
+    "total_requested_kw": 130.0,
+    "total_critical_kw": 88.0,
+    "total_supply_kw": 100.0,
+    "strategies": {
+      "ProportionalBaseline": {
+        "total_allocated_kw": 100.0,
+        "total_unmet_kw": 30.0,
+        "critical_shortfall_kw": 4.23,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.7692,
+        "jains_fairness_index": 1.0,
+        "total_cost": 250.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.094,
+        "allocations_by_building": {
+          "hostel_a": 26.92,
+          "hostel_b": 23.08,
+          "hostel_c": 19.23,
+          "eng_lab": 30.77
+        }
+      },
+      "PriorityOnlyBaseline": {
+        "total_allocated_kw": 100.0,
+        "total_unmet_kw": 30.0,
+        "critical_shortfall_kw": 15.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.7692,
+        "jains_fairness_index": 0.7463,
+        "total_cost": 250.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.083,
+        "allocations_by_building": {
+          "hostel_a": 30.0,
+          "hostel_b": 30.0,
+          "hostel_c": 0.0,
+          "eng_lab": 40.0
+        }
+      },
+      "GreedyTieredAuction": {
+        "total_allocated_kw": 100.0,
+        "total_unmet_kw": 30.0,
+        "critical_shortfall_kw": 0.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.7692,
+        "jains_fairness_index": 0.9924,
+        "total_cost": 250.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.127,
+        "allocations_by_building": {
+          "hostel_a": 25.0,
+          "hostel_b": 22.0,
+          "hostel_c": 18.0,
+          "eng_lab": 35.0
+        }
+      },
+      "OptimizedWelfareAuction": {
+        "total_allocated_kw": 100.0,
+        "total_unmet_kw": 30.0,
+        "critical_shortfall_kw": 0.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.7692,
+        "jains_fairness_index": 0.9924,
+        "total_cost": 250.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.104,
+        "allocations_by_building": {
+          "hostel_a": 25.0,
+          "hostel_b": 22.0,
+          "hostel_c": 18.0,
+          "eng_lab": 35.0
+        }
+      }
+    }
+  },
+  {
+    "scenario_name": "Scenario 3: Severe Emergency Shortage (Supply 60 kW < 88 kW Critical)",
+    "description": "Grid capacity drop below total campus critical load. Emergency rationing policy triggers.",
+    "total_requested_kw": 130.0,
+    "total_critical_kw": 88.0,
+    "total_supply_kw": 60.0,
+    "strategies": {
+      "ProportionalBaseline": {
+        "total_allocated_kw": 60.0,
+        "total_unmet_kw": 70.0,
+        "critical_shortfall_kw": 28.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.4615,
+        "jains_fairness_index": 1.0,
+        "total_cost": 150.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.077,
+        "allocations_by_building": {
+          "hostel_a": 16.15,
+          "hostel_b": 13.85,
+          "hostel_c": 11.54,
+          "eng_lab": 18.46
+        }
+      },
+      "PriorityOnlyBaseline": {
+        "total_allocated_kw": 60.0,
+        "total_unmet_kw": 70.0,
+        "critical_shortfall_kw": 35.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.4615,
+        "jains_fairness_index": 0.4808,
+        "total_cost": 150.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.071,
+        "allocations_by_building": {
+          "hostel_a": 0.0,
+          "hostel_b": 20.0,
+          "hostel_c": 0.0,
+          "eng_lab": 40.0
+        }
+      },
+      "GreedyTieredAuction": {
+        "total_allocated_kw": 60.0,
+        "total_unmet_kw": 70.0,
+        "critical_shortfall_kw": 28.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.4615,
+        "jains_fairness_index": 0.9662,
+        "total_cost": 150.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.091,
+        "allocations_by_building": {
+          "hostel_a": 13.64,
+          "hostel_b": 12.27,
+          "hostel_c": 10.23,
+          "eng_lab": 23.86
+        }
+      },
+      "OptimizedWelfareAuction": {
+        "total_allocated_kw": 60.0,
+        "total_unmet_kw": 70.0,
+        "critical_shortfall_kw": 28.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.4615,
+        "jains_fairness_index": 0.9662,
+        "total_cost": 150.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.089,
+        "allocations_by_building": {
+          "hostel_a": 13.64,
+          "hostel_b": 12.27,
+          "hostel_c": 10.23,
+          "eng_lab": 23.86
+        }
+      }
+    }
+  },
+  {
+    "scenario_name": "Scenario 4: Solar Generation Drop (Cloud Intermittency)",
+    "description": "Sudden drop in solar generation from 40 kW to 15 kW. Market clears dynamically.",
+    "total_requested_kw": 130.0,
+    "total_critical_kw": 88.0,
+    "total_supply_kw": 85.0,
+    "strategies": {
+      "ProportionalBaseline": {
+        "total_allocated_kw": 85.0,
+        "total_unmet_kw": 45.0,
+        "critical_shortfall_kw": 8.85,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.6538,
+        "jains_fairness_index": 1.0,
+        "total_cost": 212.5,
+        "average_price": 10.0,
+        "runtime_ms": 0.092,
+        "allocations_by_building": {
+          "hostel_a": 22.88,
+          "hostel_b": 19.62,
+          "hostel_c": 16.35,
+          "eng_lab": 26.15
+        }
+      },
+      "PriorityOnlyBaseline": {
+        "total_allocated_kw": 85.0,
+        "total_unmet_kw": 45.0,
+        "critical_shortfall_kw": 20.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.6538,
+        "jains_fairness_index": 0.6752,
+        "total_cost": 212.5,
+        "average_price": 10.0,
+        "runtime_ms": 0.079,
+        "allocations_by_building": {
+          "hostel_a": 15.0,
+          "hostel_b": 30.0,
+          "hostel_c": 0.0,
+          "eng_lab": 40.0
+        }
+      },
+      "GreedyTieredAuction": {
+        "total_allocated_kw": 85.0,
+        "total_unmet_kw": 45.0,
+        "critical_shortfall_kw": 3.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.6538,
+        "jains_fairness_index": 0.9662,
+        "total_cost": 212.5,
+        "average_price": 10.0,
+        "runtime_ms": 0.101,
+        "allocations_by_building": {
+          "hostel_a": 19.32,
+          "hostel_b": 17.39,
+          "hostel_c": 14.49,
+          "eng_lab": 33.81
+        }
+      },
+      "OptimizedWelfareAuction": {
+        "total_allocated_kw": 85.0,
+        "total_unmet_kw": 45.0,
+        "critical_shortfall_kw": 3.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.6538,
+        "jains_fairness_index": 0.9662,
+        "total_cost": 212.5,
+        "average_price": 10.0,
+        "runtime_ms": 0.089,
+        "allocations_by_building": {
+          "hostel_a": 19.32,
+          "hostel_b": 17.39,
+          "hostel_c": 14.49,
+          "eng_lab": 33.81
+        }
+      }
+    }
+  },
+  {
+    "scenario_name": "Scenario 5: Battery Peak Shaving Support",
+    "description": "Battery discharges at cheaper marginal price (7.0) to shave expensive peak grid tariff (12.0).",
+    "total_requested_kw": 130.0,
+    "total_critical_kw": 88.0,
+    "total_supply_kw": 110.0,
+    "strategies": {
+      "ProportionalBaseline": {
+        "total_allocated_kw": 110.0,
+        "total_unmet_kw": 20.0,
+        "critical_shortfall_kw": 1.15,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.8462,
+        "jains_fairness_index": 1.0,
+        "total_cost": 330.0,
+        "average_price": 12.0,
+        "runtime_ms": 0.079,
+        "allocations_by_building": {
+          "hostel_a": 29.62,
+          "hostel_b": 25.38,
+          "hostel_c": 21.15,
+          "eng_lab": 33.85
+        }
+      },
+      "PriorityOnlyBaseline": {
+        "total_allocated_kw": 110.0,
+        "total_unmet_kw": 20.0,
+        "critical_shortfall_kw": 10.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.8462,
+        "jains_fairness_index": 0.8421,
+        "total_cost": 330.0,
+        "average_price": 12.0,
+        "runtime_ms": 0.08,
+        "allocations_by_building": {
+          "hostel_a": 35.0,
+          "hostel_b": 30.0,
+          "hostel_c": 5.0,
+          "eng_lab": 40.0
+        }
+      },
+      "GreedyTieredAuction": {
+        "total_allocated_kw": 110.0,
+        "total_unmet_kw": 20.0,
+        "critical_shortfall_kw": 0.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.8462,
+        "jains_fairness_index": 0.9791,
+        "total_cost": 330.0,
+        "average_price": 12.0,
+        "runtime_ms": 0.102,
+        "allocations_by_building": {
+          "hostel_a": 25.0,
+          "hostel_b": 27.0,
+          "hostel_c": 18.0,
+          "eng_lab": 40.0
+        }
+      },
+      "OptimizedWelfareAuction": {
+        "total_allocated_kw": 110.0,
+        "total_unmet_kw": 20.0,
+        "critical_shortfall_kw": 0.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.8462,
+        "jains_fairness_index": 0.9791,
+        "total_cost": 330.0,
+        "average_price": 12.0,
+        "runtime_ms": 0.103,
+        "allocations_by_building": {
+          "hostel_a": 25.0,
+          "hostel_b": 27.0,
+          "hostel_c": 18.0,
+          "eng_lab": 40.0
+        }
+      }
+    }
+  },
+  {
+    "scenario_name": "Scenario 6: Strategic Price Bidding (Hostel A WTP Raised)",
+    "description": "Hostel A signals high economic valuation. Physical demand remains invariant.",
+    "total_requested_kw": 130.0,
+    "total_critical_kw": 88.0,
+    "total_supply_kw": 100.0,
+    "strategies": {
+      "ProportionalBaseline": {
+        "total_allocated_kw": 100.0,
+        "total_unmet_kw": 30.0,
+        "critical_shortfall_kw": 4.23,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.7692,
+        "jains_fairness_index": 1.0,
+        "total_cost": 250.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.076,
+        "allocations_by_building": {
+          "hostel_a": 26.92,
+          "hostel_b": 23.08,
+          "hostel_c": 19.23,
+          "eng_lab": 30.77
+        }
+      },
+      "PriorityOnlyBaseline": {
+        "total_allocated_kw": 100.0,
+        "total_unmet_kw": 30.0,
+        "critical_shortfall_kw": 15.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.7692,
+        "jains_fairness_index": 0.7463,
+        "total_cost": 250.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.316,
+        "allocations_by_building": {
+          "hostel_a": 30.0,
+          "hostel_b": 30.0,
+          "hostel_c": 0.0,
+          "eng_lab": 40.0
+        }
+      },
+      "GreedyTieredAuction": {
+        "total_allocated_kw": 100.0,
+        "total_unmet_kw": 30.0,
+        "critical_shortfall_kw": 0.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.7692,
+        "jains_fairness_index": 0.9924,
+        "total_cost": 250.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.106,
+        "allocations_by_building": {
+          "hostel_a": 25.0,
+          "hostel_b": 22.0,
+          "hostel_c": 18.0,
+          "eng_lab": 35.0
+        }
+      },
+      "OptimizedWelfareAuction": {
+        "total_allocated_kw": 100.0,
+        "total_unmet_kw": 30.0,
+        "critical_shortfall_kw": 0.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.7692,
+        "jains_fairness_index": 0.9924,
+        "total_cost": 250.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.096,
+        "allocations_by_building": {
+          "hostel_a": 25.0,
+          "hostel_b": 22.0,
+          "hostel_c": 18.0,
+          "eng_lab": 35.0
+        }
+      }
+    }
+  },
+  {
+    "scenario_name": "Scenario 7: Starvation Mitigation via Deprivation Boost",
+    "description": "Hostel C has experienced starvation; deprivation factor elevates its composite score.",
+    "total_requested_kw": 130.0,
+    "total_critical_kw": 88.0,
+    "total_supply_kw": 95.0,
+    "strategies": {
+      "ProportionalBaseline": {
+        "total_allocated_kw": 95.0,
+        "total_unmet_kw": 35.0,
+        "critical_shortfall_kw": 5.77,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.7308,
+        "jains_fairness_index": 1.0,
+        "total_cost": 237.5,
+        "average_price": 10.0,
+        "runtime_ms": 0.076,
+        "allocations_by_building": {
+          "hostel_a": 25.58,
+          "hostel_b": 21.92,
+          "hostel_c": 18.27,
+          "eng_lab": 29.23
+        }
+      },
+      "PriorityOnlyBaseline": {
+        "total_allocated_kw": 95.0,
+        "total_unmet_kw": 35.0,
+        "critical_shortfall_kw": 15.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.7308,
+        "jains_fairness_index": 0.7337,
+        "total_cost": 237.5,
+        "average_price": 10.0,
+        "runtime_ms": 0.074,
+        "allocations_by_building": {
+          "hostel_a": 25.0,
+          "hostel_b": 30.0,
+          "hostel_c": 0.0,
+          "eng_lab": 40.0
+        }
+      },
+      "GreedyTieredAuction": {
+        "total_allocated_kw": 95.0,
+        "total_unmet_kw": 35.0,
+        "critical_shortfall_kw": 0.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.7308,
+        "jains_fairness_index": 0.9845,
+        "total_cost": 237.5,
+        "average_price": 10.0,
+        "runtime_ms": 0.096,
+        "allocations_by_building": {
+          "hostel_a": 22.92,
+          "hostel_b": 20.33,
+          "hostel_c": 16.75,
+          "eng_lab": 35.0
+        }
+      },
+      "OptimizedWelfareAuction": {
+        "total_allocated_kw": 95.0,
+        "total_unmet_kw": 35.0,
+        "critical_shortfall_kw": 0.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.7308,
+        "jains_fairness_index": 0.9797,
+        "total_cost": 237.5,
+        "average_price": 10.0,
+        "runtime_ms": 0.091,
+        "allocations_by_building": {
+          "hostel_a": 23.0,
+          "hostel_b": 22.0,
+          "hostel_c": 15.0,
+          "eng_lab": 35.0
+        }
+      }
+    }
+  },
+  {
+    "scenario_name": "Scenario 8: Dynamic Re-Auction Round 2 (Demand Response Revised Bids)",
+    "description": "Re-auction with reduced supply (80 kW) and revised demand-response bids with voluntary reduction.",
+    "total_requested_kw": 127.0,
+    "total_critical_kw": 88.0,
+    "total_supply_kw": 80.0,
+    "strategies": {
+      "ProportionalBaseline": {
+        "total_allocated_kw": 80.0,
+        "total_unmet_kw": 47.0,
+        "critical_shortfall_kw": 11.69,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.6299,
+        "jains_fairness_index": 1.0,
+        "total_cost": 200.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.077,
+        "allocations_by_building": {
+          "hostel_a": 22.05,
+          "hostel_b": 18.9,
+          "hostel_c": 15.75,
+          "eng_lab": 23.31
+        }
+      },
+      "PriorityOnlyBaseline": {
+        "total_allocated_kw": 80.0,
+        "total_unmet_kw": 47.0,
+        "critical_shortfall_kw": 22.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.6299,
+        "jains_fairness_index": 0.6576,
+        "total_cost": 200.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.076,
+        "allocations_by_building": {
+          "hostel_a": 13.0,
+          "hostel_b": 30.0,
+          "hostel_c": 0.0,
+          "eng_lab": 37.0
+        }
+      },
+      "GreedyTieredAuction": {
+        "total_allocated_kw": 80.0,
+        "total_unmet_kw": 47.0,
+        "critical_shortfall_kw": 8.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.6299,
+        "jains_fairness_index": 0.9509,
+        "total_cost": 200.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.094,
+        "allocations_by_building": {
+          "hostel_a": 18.18,
+          "hostel_b": 16.36,
+          "hostel_c": 13.64,
+          "eng_lab": 31.82
+        }
+      },
+      "OptimizedWelfareAuction": {
+        "total_allocated_kw": 80.0,
+        "total_unmet_kw": 47.0,
+        "critical_shortfall_kw": 8.0,
+        "supply_utilization": 1.0,
+        "service_ratio": 0.6299,
+        "jains_fairness_index": 0.9509,
+        "total_cost": 200.0,
+        "average_price": 10.0,
+        "runtime_ms": 0.1,
+        "allocations_by_building": {
+          "hostel_a": 18.18,
+          "hostel_b": 16.36,
+          "hostel_c": 13.64,
+          "eng_lab": 31.82
+        }
+      }
+    }
+  }
+]
