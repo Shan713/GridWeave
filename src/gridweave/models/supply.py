@@ -115,7 +115,7 @@ class DispatchResult:
 
     @property
     def shortfall_kw(self) -> float:
-        return self.requested_kw - self.delivered_kw
+        return round(self.requested_kw - self.delivered_kw, 4)
 
     def to_dict(self) -> dict:
         return {"source_id": self.source_id, "time_slot": self.time_slot.to_dict(),
