@@ -1,0 +1,62 @@
+{
+  "timestamp": "2026-09-28T23:10:18.052187",
+  "benchmark": "Person 3 \u2014 Scalability and Throughput",
+  "fleet_scaling": {
+    "fleet_1": {
+      "source_count": 1,
+      "offer_latency_ms": 0.014,
+      "dispatch_latency_ms": 0.204,
+      "throughput_offers_per_sec": 69570.1
+    },
+    "fleet_3": {
+      "source_count": 3,
+      "offer_latency_ms": 0.082,
+      "dispatch_latency_ms": 3.671,
+      "throughput_offers_per_sec": 36588.9
+    },
+    "fleet_9": {
+      "source_count": 9,
+      "offer_latency_ms": 0.337,
+      "dispatch_latency_ms": 13.669,
+      "throughput_offers_per_sec": 26726.1
+    },
+    "fleet_21": {
+      "source_count": 21,
+      "offer_latency_ms": 0.518,
+      "dispatch_latency_ms": 79.844,
+      "throughput_offers_per_sec": 40575.1
+    },
+    "fleet_45": {
+      "source_count": 45,
+      "offer_latency_ms": 4.136,
+      "dispatch_latency_ms": 393.813,
+      "throughput_offers_per_sec": 10880.1
+    },
+    "fleet_99": {
+      "source_count": 99,
+      "offer_latency_ms": 24.28,
+      "dispatch_latency_ms": 143.726,
+      "throughput_offers_per_sec": 4077.4
+    }
+  },
+  "horizon_scaling": {
+    "1_days_96_slots": {
+      "total_slots": 96,
+      "total_time_ms": 118.17,
+      "time_per_slot_ms": 1.231,
+      "slots_per_second": 812.4
+    },
+    "3_days_288_slots": {
+      "total_slots": 288,
+      "total_time_ms": 866.9,
+      "time_per_slot_ms": 3.01,
+      "slots_per_second": 332.2
+    },
+    "7_days_672_slots": {
+      "total_slots": 672,
+      "total_time_ms": 4200.88,
+      "time_per_slot_ms": 6.251,
+      "slots_per_second": 160.0
+    }
+  }
+}

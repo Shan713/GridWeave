@@ -1,0 +1,192 @@
+{
+  "timestamp": "2026-09-28T23:09:02.360223",
+  "workstream": "Person 3 \u2014 Energy Supply Intelligence",
+  "experiment_1_solar_forecasting": {
+    "clear_sky": {
+      "naive_persistence": {
+        "horizon_1": {
+          "mae_kw": 1.4519,
+          "rmse_kw": 2.6623
+        },
+        "horizon_4": {
+          "mae_kw": 1.7537,
+          "rmse_kw": 3.6485
+        },
+        "horizon_8": {
+          "mae_kw": 2.6135,
+          "rmse_kw": 7.4584
+        }
+      },
+      "seasonal_persistence": {
+        "horizon_1": {
+          "mae_kw": 1.1829,
+          "rmse_kw": 2.3573
+        },
+        "horizon_4": {
+          "mae_kw": 5.4256,
+          "rmse_kw": 9.8459
+        },
+        "horizon_8": {
+          "mae_kw": 11.5212,
+          "rmse_kw": 20.7117
+        }
+      },
+      "time_of_day_ema": {
+        "horizon_1": {
+          "mae_kw": 1.0816,
+          "rmse_kw": 2.0582
+        },
+        "horizon_4": {
+          "mae_kw": 1.0988,
+          "rmse_kw": 2.0746
+        },
+        "horizon_8": {
+          "mae_kw": 1.1227,
+          "rmse_kw": 2.097
+        }
+      },
+      "weather_aware": {
+        "horizon_1": {
+          "mae_kw": 1.1781,
+          "rmse_kw": 2.123
+        },
+        "horizon_4": {
+          "mae_kw": 2.6386,
+          "rmse_kw": 4.7486
+        },
+        "horizon_8": {
+          "mae_kw": 4.4396,
+          "rmse_kw": 7.5313
+        }
+      }
+    },
+    "cloudy": {
+      "naive_persistence": {
+        "horizon_1": {
+          "mae_kw": 2.031,
+          "rmse_kw": 3.8037
+        },
+        "horizon_4": {
+          "mae_kw": 2.2707,
+          "rmse_kw": 4.1754
+        },
+        "horizon_8": {
+          "mae_kw": 2.9408,
+          "rmse_kw": 6.6025
+        }
+      },
+      "seasonal_persistence": {
+        "horizon_1": {
+          "mae_kw": 1.7051,
+          "rmse_kw": 3.2166
+        },
+        "horizon_4": {
+          "mae_kw": 4.6301,
+          "rmse_kw": 8.1414
+        },
+        "horizon_8": {
+          "mae_kw": 9.3194,
+          "rmse_kw": 16.5406
+        }
+      },
+      "time_of_day_ema": {
+        "horizon_1": {
+          "mae_kw": 1.6917,
+          "rmse_kw": 3.1174
+        },
+        "horizon_4": {
+          "mae_kw": 1.7187,
+          "rmse_kw": 3.1422
+        },
+        "horizon_8": {
+          "mae_kw": 1.7561,
+          "rmse_kw": 3.1762
+        }
+      },
+      "weather_aware": {
+        "horizon_1": {
+          "mae_kw": 1.6258,
+          "rmse_kw": 2.9406
+        },
+        "horizon_4": {
+          "mae_kw": 1.8053,
+          "rmse_kw": 3.2629
+        },
+        "horizon_8": {
+          "mae_kw": 2.1673,
+          "rmse_kw": 3.9425
+        }
+      }
+    }
+  },
+  "experiment_2_supply_strategies": {
+    "grid_only": {
+      "total_energy_delivered_kwh": 4514.9525,
+      "grid_import_kwh": 4514.9525,
+      "peak_grid_import_kw": 280.0,
+      "grid_procurement_cost": 52131.2325,
+      "battery_degradation_cost": 0.0,
+      "total_procurement_cost": 52131.2325,
+      "levelized_cost_per_kwh": 11.5464,
+      "solar_generation_kwh": 0.0,
+      "solar_delivered_kwh": 0.0,
+      "solar_curtailed_kwh": 0.0,
+      "solar_self_consumption_rate": 1.0,
+      "battery_throughput_kwh": 0.0,
+      "battery_cycles": 0.0,
+      "runtime_ms": 29.21,
+      "final_soc": null
+    },
+    "grid_solar": {
+      "total_energy_delivered_kwh": 4514.9525,
+      "grid_import_kwh": 3345.46,
+      "peak_grid_import_kw": 280.0,
+      "grid_procurement_cost": 40098.1066,
+      "battery_degradation_cost": 0.0,
+      "total_procurement_cost": 40098.1066,
+      "levelized_cost_per_kwh": 8.8812,
+      "solar_generation_kwh": 1169.4925,
+      "solar_delivered_kwh": 1169.4925,
+      "solar_curtailed_kwh": 0.0,
+      "solar_self_consumption_rate": 1.0,
+      "battery_throughput_kwh": 0.0,
+      "battery_cycles": 0.0,
+      "runtime_ms": 172.53,
+      "final_soc": null
+    },
+    "grid_solar_rule_based_battery": {
+      "total_energy_delivered_kwh": 4514.9525,
+      "grid_import_kwh": 3267.085,
+      "peak_grid_import_kw": 280.0,
+      "grid_procurement_cost": 38687.3565,
+      "battery_degradation_cost": 548.625,
+      "total_procurement_cost": 39235.9816,
+      "levelized_cost_per_kwh": 8.6902,
+      "solar_generation_kwh": 1169.4925,
+      "solar_delivered_kwh": 1169.4925,
+      "solar_curtailed_kwh": 0.0,
+      "solar_self_consumption_rate": 1.0,
+      "battery_throughput_kwh": 78.375,
+      "battery_cycles": 0.26125,
+      "runtime_ms": 136.53,
+      "final_soc": 0.2
+    },
+    "grid_solar_forecast_aware_battery": {
+      "total_energy_delivered_kwh": 4514.9525,
+      "grid_import_kwh": 3267.085,
+      "peak_grid_import_kw": 280.0,
+      "grid_procurement_cost": 39706.2316,
+      "battery_degradation_cost": 548.625,
+      "total_procurement_cost": 40254.8566,
+      "levelized_cost_per_kwh": 8.9159,
+      "solar_generation_kwh": 1169.4925,
+      "solar_delivered_kwh": 1169.4925,
+      "solar_curtailed_kwh": 0.0,
+      "solar_self_consumption_rate": 1.0,
+      "battery_throughput_kwh": 78.375,
+      "battery_cycles": 0.26125,
+      "runtime_ms": 186.79,
+      "final_soc": 0.2
+    }
+  }
+}
