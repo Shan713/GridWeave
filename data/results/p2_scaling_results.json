@@ -1,0 +1,52 @@
+[
+  {
+    "buildings": 3,
+    "total_requested_kw": 111.88,
+    "greedy_runtime_ms": 1.001,
+    "greedy_us_per_bid": 333.5,
+    "greedy_peak_mem_kb": 30.7,
+    "opt_runtime_ms": 0.698,
+    "opt_us_per_bid": 232.6,
+    "opt_peak_mem_kb": 26.9
+  },
+  {
+    "buildings": 10,
+    "total_requested_kw": 281.52,
+    "greedy_runtime_ms": 1.367,
+    "greedy_us_per_bid": 136.7,
+    "greedy_peak_mem_kb": 61.9,
+    "opt_runtime_ms": 2.187,
+    "opt_us_per_bid": 218.7,
+    "opt_peak_mem_kb": 61.7
+  },
+  {
+    "buildings": 50,
+    "total_requested_kw": 1436.76,
+    "greedy_runtime_ms": 5.811,
+    "greedy_us_per_bid": 116.2,
+    "greedy_peak_mem_kb": 278.8,
+    "opt_runtime_ms": 5.853,
+    "opt_us_per_bid": 117.1,
+    "opt_peak_mem_kb": 283.6
+  },
+  {
+    "buildings": 100,
+    "total_requested_kw": 2871.71,
+    "greedy_runtime_ms": 13.18,
+    "greedy_us_per_bid": 131.8,
+    "greedy_peak_mem_kb": 552.1,
+    "opt_runtime_ms": 11.364,
+    "opt_us_per_bid": 113.6,
+    "opt_peak_mem_kb": 563.2
+  },
+  {
+    "buildings": 500,
+    "total_requested_kw": 14379.76,
+    "greedy_runtime_ms": 65.967,
+    "greedy_us_per_bid": 131.9,
+    "greedy_peak_mem_kb": 2714.9,
+    "opt_runtime_ms": 64.267,
+    "opt_us_per_bid": 128.5,
+    "opt_peak_mem_kb": 2773.7
+  }
+]
