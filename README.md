@@ -8,8 +8,9 @@ separates critical from flexible load, and bids into a campus energy market. Aft
 slot, the agent settles the market's allocation against the demand that actually occurred, defers or
 curtails what could not be served, and carries the consequences into the next slot.
 
-This repository contains **Workstream 1: Building Intelligence & Demand Management**, plus the
-contracts, protocols and mocks that the other three workstreams build against.
+This repository contains the sealed **Workstream 1: Building Intelligence & Demand Management**,
+the production **Workstream 2 auction**, and an independently testable **Workstream 3 energy
+supply subsystem**. Workstream 4 remains the coordinator and dashboard boundary.
 
 **P1 status: SEALED** at contract version 2.0 (bid schema 1.1). See [docs/P1_FREEZE.md](docs/P1_FREEZE.md)
 for the frozen contract, the ownership boundaries and the change policy.
@@ -17,8 +18,8 @@ for the frozen contract, the ownership boundaries and the change policy.
 | Workstream | Owner | Scope | Status |
 |---|---|---|---|
 | 1 | P1 | Building agents, demand simulation, forecasting, load classification, priority, bid generation, settlement, local response | **Implemented (this repo)** |
-| 2 | P2 | Auction / market mechanism, bid ranking, pricing, allocation, critical-load constraint policy | Protocol + mock provided |
-| 3 | P3 | Grid, solar and battery agents, supply offers, dispatch, state of charge | Protocol + mocks provided |
+| 2 | P2 | Auction / market mechanism, bid ranking, pricing, allocation, critical-load constraint policy | **Implemented** |
+| 3 | P3 | Grid, solar and battery agents, supply offers, dispatch, state of charge, forecasting, accounting | **Implemented** |
 | 4 | P4 | Environment loop, events, re-auction policy, dashboard, global metrics | Protocol + reference loop provided |
 
 ## 1. Architecture
@@ -88,6 +89,9 @@ python scripts/run_building_simulation.py    # 5 buildings x 3 days, closed loop
 python scripts/run_forecast_experiment.py    # forecasting comparison on development and held-out seeds
 python scripts/benchmark_scaling.py          # runtime and memory vs number of buildings
 python scripts/generate_sample_data.py       # regenerate data/sample/
+python examples/p3_supply_demo.py            # standalone Grid/Solar/Battery dispatch demo
+python scripts/run_p3_experiments.py         # solar forecasting and supply strategy benchmarks
+python scripts/benchmark_p3_scaling.py       # P3 fleet/scaling benchmark
 ```
 
 A minimal agent in code:
@@ -162,7 +166,7 @@ methods. They are not a general claim about which model is best. Full tables and
 ## 9. Testing
 
 ```bash
-pytest                                   # 304 tests: unit + integration + runnable doc examples
+pytest                                   # unit + integration + runnable doc examples
 pytest --cov=gridweave                   # coverage
 ruff check src tests scripts examples    # lint
 ```
@@ -189,8 +193,8 @@ All randomness is seeded. CI runs lint and tests on Python 3.10, 3.11, 3.12 and 
 
 * **P2 (market):** implement `clear(slot, bids, offers) -> ClearingResult` (allocations + dispatch).
   Test against `data/sample/sample_bids.json` and `validate_clearing`.
-* **P3 (supply):** implement `offers(slot) -> [SupplyOffer]` and
-  `dispatch(requests) -> [DispatchResult]` (update SOC). `MockBattery` shows the minimum.
+* **P3 (supply):** use `CampusSupplyProvider` from [docs/p3_integration.md](docs/p3_integration.md)
+  for production Grid, Solar and Battery offers, validated dispatch, accounting and events.
 * **P4 (coordinator):** drive `observe → generate_bid → offers → [revised bids] → clear → dispatch →
   settle(allocation, realised) → apply_settlement`. `MockCoordinator` is the validated reference loop.
 
@@ -207,8 +211,8 @@ distributed execution. See [docs/architecture.md](docs/architecture.md#scalabili
   seasonal forecasters.
 * Forecasters are statistical baselines. The agent's adaptation is an EWMA deprivation state and a
   deferred-energy queue, not machine learning.
-* The market, supply and coordinator are mocks. In the mock market, voluntary demand response changes
-  outcomes very little; its value depends on P2's mechanism.
+* The coordinator and dashboard remain outside this repository's P3 scope. Supply profiles and
+  demand data are synthetic simulation assumptions, not measured campus data.
 * Critical-load protection is not guaranteed by P1 (see section 6).
 * Load classification is parametric (fractions plus an operational floor), not a per-appliance model.
   Rebound is a single fraction, not a thermal model.
