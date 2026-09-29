@@ -1,0 +1,191 @@
+"""Tests for dashboard data layer — verifies the one canonical metrics source.
+
+The dashboards must never compute metrics independently.  These tests confirm
+that :class:`MetricsAggregator` produces all data fields needed by both the
+web dashboard and the native Python dashboard.
+"""
+from __future__ import annotations
+
+import pytest
+
+from gridweave.auction import AuctionEngine, GreedyAllocationStrategy
+from gridweave.config.settings import synthetic_campus
+from gridweave.coordinator import (
+    Coordinator,
+    MetricsAggregator,
+    SimulationResult,
+    SlotRecord,
+)
+from gridweave.factory import build_agents, build_simulators
+from gridweave.supply.provider import CampusSupplyProvider
+
+
+_SUPPLY_CFG = {
+    "sources": [
+        {"type": "grid",    "source_id": "g", "nominal_capacity_kw": 400.0},
+        {"type": "solar",   "source_id": "s", "installed_capacity_kw": 150.0},
+        {"type": "battery", "source_id": "b", "capacity_kwh": 80.0, "initial_soc": 0.6},
+    ]
+}
+
+
+def _run_sim(n: int = 3, steps: int = 8) -> tuple[SimulationResult, dict]:
+    cfg = synthetic_campus(n, seed=42)
+    agents = build_agents(cfg)
+    envs = build_simulators(cfg)
+    auc = AuctionEngine(strategy=GreedyAllocationStrategy())
+    supply = CampusSupplyProvider.from_config(_SUPPLY_CFG)
+    coord = Coordinator(agents, envs, auc, supply)
+    result = coord.run(steps=steps)
+    return result, agents
+
+
+class TestDashboardDataLayer:
+    """Verify the dashboard data contract: one canonical MetricsAggregator."""
+
+    def test_metrics_aggregator_is_sole_source(self):
+        """The same metrics object must be used for both dashboards."""
+        result, agents = _run_sim(3, 6)
+        m1 = MetricsAggregator.compute(result, agents)
+        m2 = MetricsAggregator.compute(result, agents)
+        # Deterministic — same result twice
+        assert m1.overall_service_ratio == m2.overall_service_ratio
+        assert m1.total_demand_kwh == m2.total_demand_kwh
+
+    def test_overview_kpis_available(self):
+        """Fields required by the web dashboard Overview page."""
+        result, agents = _run_sim(3, 5)
+        m = MetricsAggregator.compute(result, agents)
+        # Service
+        assert hasattr(m, "overall_service_ratio")
+        assert hasattr(m, "critical_service_ratio")
+        # Demand
+        assert hasattr(m, "total_demand_kwh")
+        assert hasattr(m, "total_served_kwh")
+        assert hasattr(m, "total_deferred_kwh")
+        assert hasattr(m, "total_curtailed_kwh")
+        assert hasattr(m, "total_critical_shortfall_kwh")
+        # Supply
+        assert hasattr(m, "total_grid_kwh")
+        assert hasattr(m, "total_solar_kwh")
+        assert hasattr(m, "total_battery_discharge_kwh")
+        assert hasattr(m, "renewable_penetration_rate")
+        # Market
+        assert hasattr(m.market, "scarcity_slots")
+        assert hasattr(m.market, "re_auction_slots")
+        assert hasattr(m.market, "avg_clearing_price")
+        assert hasattr(m.market, "supply_utilization")
+        # Fairness
+        assert hasattr(m.fairness, "jains_index")
+        assert hasattr(m.fairness, "jains_index_final")
+
+    def test_time_series_for_demand_supply_chart(self):
+        """Fields required by Demand vs Supply time-series chart."""
+        result, _ = _run_sim(3, 8)
+        m = MetricsAggregator.compute(result)
+        n = result.n_slots
+        assert len(m.slot_timestamps) == n
+        assert len(m.slot_demand_kw) == n
+        assert len(m.slot_supply_kw) == n
+        assert len(m.slot_allocated_kw) == n
+        assert len(m.slot_delivered_kw) == n
+        assert len(m.slot_served_kw) == n
+
+    def test_time_series_for_critical_chart(self):
+        result, _ = _run_sim(2, 5)
+        m = MetricsAggregator.compute(result)
+        assert len(m.slot_critical_shortfall_kw) == result.n_slots
+        assert len(m.slot_deferred_kw) == result.n_slots
+        assert len(m.slot_curtailed_kw) == result.n_slots
+
+    def test_time_series_for_price_chart(self):
+        result, _ = _run_sim(2, 4)
+        m = MetricsAggregator.compute(result)
+        assert len(m.slot_clearing_price) == result.n_slots
+        # Prices are None or float
+        for p in m.slot_clearing_price:
+            assert p is None or isinstance(p, float)
+
+    def test_time_series_for_fairness_chart(self):
+        result, _ = _run_sim(3, 6)
+        m = MetricsAggregator.compute(result)
+        assert len(m.slot_service_ratio) == result.n_slots
+
+    def test_time_series_for_events_chart(self):
+        result, _ = _run_sim(2, 4)
+        m = MetricsAggregator.compute(result)
+        assert len(m.slot_events) == result.n_slots
+        for ev_list in m.slot_events:
+            assert isinstance(ev_list, list)
+
+    def test_building_table_data_available(self):
+        """Data required for per-building table in dashboard."""
+        result, agents = _run_sim(3, 6)
+        for bid, bs in result.building_summaries.items():
+            assert hasattr(bs, "demand_kwh")
+            assert hasattr(bs, "served_kwh")
+            assert hasattr(bs, "service_ratio")
+            assert hasattr(bs, "critical_shortfall_kwh")
+            assert hasattr(bs, "critical_shortfall_events")
+            assert hasattr(bs, "deferred_kwh")
+            assert hasattr(bs, "curtailed_kwh")
+            assert hasattr(bs, "forecast_mae_kw")
+            assert hasattr(bs, "total_cost")
+
+    def test_building_series_for_per_building_chart(self):
+        result, _ = _run_sim(3, 5)
+        bid = next(iter(result.building_ids))
+        for field in ("served_kw", "allocated_kw", "deferred_kw", "actual_demand_kw"):
+            series = result.building_series(bid, field)
+            assert len(series) == result.n_slots
+
+    def test_export_to_dict_has_all_sections(self):
+        result, agents = _run_sim(2, 3)
+        d = result.to_dict()
+        assert "slots" in d
+        assert "building_summaries" in d
+        assert "supply_metrics" in d
+        assert "event_log" in d
+        assert "n_buildings" in d
+        assert "overall_service_ratio" in d
+
+    def test_supply_metrics_has_grid_solar_battery(self):
+        result, _ = _run_sim(2, 4)
+        sm = result.supply_metrics
+        assert "grid_import_kwh" in sm
+        assert "solar_delivered_kwh" in sm
+        assert "battery_discharge_kwh" in sm
+        assert "renewable_penetration_rate" in sm
+        assert "total_procurement_cost" in sm
+
+    def test_market_decision_traces_in_slot(self):
+        """MarketResult (with traces) is stored when AuctionEngine is used."""
+        result, _ = _run_sim(2, 2)
+        for r in result.slots:
+            # market_result may be None if engine doesn't expose get_last_result
+            # but if it exists it should have decision_traces
+            if r.market_result is not None:
+                assert hasattr(r.market_result, "decision_traces")
+
+    def test_event_log_accessible(self):
+        result, _ = _run_sim(2, 3)
+        assert isinstance(result.event_log, list)
+        for ev in result.event_log:
+            assert hasattr(ev, "event_type")
+            assert hasattr(ev, "slot_index")
+
+    def test_two_dashboards_same_service_ratio(self):
+        """Simulate web + native dashboards both reading from the same metrics."""
+        result, agents = _run_sim(3, 6)
+        web_metrics = MetricsAggregator.compute(result, agents)
+        python_metrics = MetricsAggregator.compute(result, agents)
+        assert web_metrics.overall_service_ratio == python_metrics.overall_service_ratio
+        assert web_metrics.total_demand_kwh == python_metrics.total_demand_kwh
+        assert web_metrics.fairness.jains_index == python_metrics.fairness.jains_index
+
+    def test_web_dashboard_make_handler(self):
+        """Verify web dashboard handler initializes without attribute errors."""
+        from gridweave.coordinator.web_dashboard import make_handler
+        result, _ = _run_sim(2, 3)
+        handler_cls = make_handler(result)
+        assert handler_cls is not None
