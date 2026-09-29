@@ -9,23 +9,23 @@ Shows:
 from __future__ import annotations
 
 import sys
+
+from gridweave.auction import AuctionEngine, GreedyAllocationStrategy
+from gridweave.config import synthetic_campus
 from gridweave.coordinator import (
     Coordinator,
     MetricsAggregator,
-    SCENARIOS,
     get_scenario,
 )
 from gridweave.coordinator.cli_dashboard import CliDashboard
-from gridweave.config import synthetic_campus
 from gridweave.factory import build_agents, build_simulators
-from gridweave.auction import AuctionEngine, GreedyAllocationStrategy
 from gridweave.supply import CampusSupplyProvider
 
 
 def run_demo(scenario_name: str = "solar_drop", steps: int = 48) -> None:
-    print(f"\n==========================================================================")
+    print("\n==========================================================================")
     print(f"  GridWeave Coordinator Demo - Running Scenario: '{scenario_name}' ({steps} slots)")
-    print(f"==========================================================================")
+    print("==========================================================================")
 
     scenario = get_scenario(scenario_name)
     cfg = synthetic_campus(scenario.n_buildings, seed=scenario.seed)

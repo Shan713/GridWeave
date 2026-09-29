@@ -13,16 +13,11 @@ from gridweave.contracts import validate_clearing, validate_dispatch
 from gridweave.coordinator import (
     Coordinator,
     MetricsAggregator,
-    GRID_OUTAGE,
-    NORMAL,
-    SCARCITY,
-    SOLAR_DROP,
     Scenario,
     ScheduledEvent,
 )
 from gridweave.factory import build_agents, build_simulators
 from gridweave.supply.provider import CampusSupplyProvider
-
 
 _SUPPLY_CFG = {
     "sources": [
@@ -97,7 +92,7 @@ class TestNormalOperation:
 
     def test_energy_balance_all_agents(self):
         coord, agents, _ = _build(n=3)
-        result = coord.run(steps=8)
+        coord.run(steps=8)
         for bid, agent in agents.items():
             err = agent.energy_balance_kwh()
             assert err < 1e-4, f"Energy imbalance {err:.6f} for {bid}"
@@ -237,11 +232,11 @@ class TestForecastError:
 
 class TestReAuction:
     def test_re_auction_fires_when_demand_exceeds_supply(self):
-        """Force scarcity → rounds == 2 → re_auction_slots > 0."""
         tight = {"sources": [{"type": "grid", "source_id": "g", "nominal_capacity_kw": 5.0}]}
         coord, _, _ = _build(n=5, supply_cfg=tight, negotiation_rounds=2)
         result = coord.run(steps=6)
         m = MetricsAggregator.compute(result)
+        assert m.scenario_name is not None
         # With 5 buildings and 5 kW supply, almost certainly scarcity each slot
         re_auctions = sum(1 for r in result.slots if r.rounds > 1)
         assert re_auctions >= 0  # may be 0 if first bids fit; just ensure no crash

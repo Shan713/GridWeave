@@ -27,13 +27,10 @@ Failure handling follows the same semantics as :class:`~gridweave.mocks.coordina
 """
 from __future__ import annotations
 
-import logging
 import time
-from dataclasses import dataclass, field
-from datetime import timedelta
 from typing import Any, Mapping
 
-from gridweave.contracts import ContractViolation, validate_clearing, validate_dispatch
+from gridweave.contracts import validate_clearing, validate_dispatch
 from gridweave.coordinator.records import (
     BuildingSummary,
     EventRecord,
@@ -48,9 +45,9 @@ from gridweave.models.common import TimeSlot
 from gridweave.models.context import BidContext
 from gridweave.models.demand import Observation
 from gridweave.models.settlement import Settlement
-from gridweave.models.supply import ClearingResult, DispatchResult, SupplyOffer
+from gridweave.models.supply import SupplyOffer
 from gridweave.utils.logging import get_logger
-from gridweave.utils.validation import ValidationError, clamp
+from gridweave.utils.validation import clamp
 
 log = get_logger("coordinator")
 

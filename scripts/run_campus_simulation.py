@@ -12,16 +12,15 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 import time
 from pathlib import Path
 
 from gridweave.auction import AuctionEngine, GreedyAllocationStrategy, PriorityAllocationStrategy
-from gridweave.config import load_campus_config, synthetic_campus
+from gridweave.config import synthetic_campus
 from gridweave.coordinator import (
+    SCENARIOS,
     Coordinator,
     MetricsAggregator,
-    SCENARIOS,
     Scenario,
     get_scenario,
 )
@@ -130,7 +129,7 @@ def main() -> None:
     )
 
     n_steps = args.steps if args.steps is not None else scenario.n_slots
-    print(f"Starting GridWeave Campus Simulation...")
+    print("Starting GridWeave Campus Simulation...")
     print(f"Scenario: {scenario.name} | Buildings: {len(agents)} | Steps: {n_steps} | Strategy: {args.strategy}")
 
     t0 = time.perf_counter()

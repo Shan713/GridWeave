@@ -4,13 +4,12 @@ from __future__ import annotations
 import pytest
 
 from gridweave.coordinator.scenarios import (
-    BATTERY_DERATE,
     BATTERY_OUTAGE,
     GRID_OUTAGE,
     MIXED_STRESS,
     NORMAL,
-    SCENARIOS,
     SCARCITY,
+    SCENARIOS,
     SOLAR_DROP,
     TARIFF_SPIKE,
     VALID_EVENT_TYPES,
@@ -19,7 +18,6 @@ from gridweave.coordinator.scenarios import (
     get_scenario,
 )
 from gridweave.utils.validation import ValidationError
-
 
 # ---------------------------------------------------------------------------
 # ScheduledEvent

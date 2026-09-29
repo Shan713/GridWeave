@@ -5,8 +5,6 @@ failure handling, determinism, reset, and the simulation result structure.
 """
 from __future__ import annotations
 
-from datetime import datetime
-
 import pytest
 
 from gridweave.auction import AuctionEngine, GreedyAllocationStrategy
@@ -14,22 +12,13 @@ from gridweave.config.settings import synthetic_campus
 from gridweave.coordinator import (
     Coordinator,
     CoordinatorError,
-    MetricsAggregator,
-    NORMAL,
-    SCARCITY,
-    SOLAR_DROP,
     Scenario,
     ScheduledEvent,
-    SettlementError,
     SimulationResult,
     SlotRecord,
 )
 from gridweave.factory import build_agents, build_simulators
-from gridweave.mocks import MockAuctioneer, MockGrid, MockSolar
-from gridweave.mocks.supply import MockBattery, MockSupply
-from gridweave.models.common import TimeSlot
 from gridweave.supply.provider import CampusSupplyProvider
-
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -206,7 +195,7 @@ class TestMultiSlot:
         """Agent.stats.demand_kwh should equal sum of slot actual_demand_kw * h."""
         agents, envs, auc, supply = _make_system(2)
         coord = Coordinator(agents, envs, auc, supply)
-        result = coord.run(steps=4)
+        coord.run(steps=4)
         h = 15 / 60
         for bid, agent in agents.items():
             expected_demand = sum(
@@ -373,7 +362,8 @@ class TestDeterminism:
         def _run():
             agents, envs, auc, supply = _make_system(3, seed=42)
             coord = Coordinator(agents, envs, auc, supply)
-            result = coord.run(steps=5)
+            res = coord.run(steps=5)
+            assert res is not None
             return [r.served_kw for r in coord.records]
 
         r1 = _run()

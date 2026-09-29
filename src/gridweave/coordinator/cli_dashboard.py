@@ -59,7 +59,7 @@ class CliDashboard:
 
         # Per Building Breakdown
         lines.append("| PER-BUILDING SUMMARY                                                          |")
-        lines.append(f"| Total Buildings: {len(result.building_summaries):<6}                                               |")
+        lines.append(f"| Total Buildings: {len(result.building_summaries):<60} |")
         lines.append(div)
         lines.append("| Building ID     Demand(kWh) Served (kWh)  Def (kWh)  Curt (kWh)  Svc Ratio      |")
         lines.append(div)

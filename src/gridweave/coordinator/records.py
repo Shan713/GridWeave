@@ -7,8 +7,7 @@ what happened — dashboards, exports and metrics all read from them.
 from __future__ import annotations
 
 import json
-import math
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
@@ -16,7 +15,6 @@ from gridweave.models.bid import Bid
 from gridweave.models.common import TimeSlot
 from gridweave.models.settlement import Settlement
 from gridweave.models.supply import ClearingResult, DispatchResult, SupplyOffer
-
 
 # ---------------------------------------------------------------------------
 # Event record

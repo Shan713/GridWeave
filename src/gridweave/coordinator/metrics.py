@@ -14,11 +14,10 @@ from __future__ import annotations
 
 import math
 import statistics
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import Any
 
-from gridweave.coordinator.records import SimulationResult, SlotRecord
-
+from gridweave.coordinator.records import SimulationResult
 
 # ---------------------------------------------------------------------------
 # Dataclasses
@@ -178,8 +177,8 @@ class CampusMetrics:
             f"{'=' * 70}",
             f"  Buildings : {self.n_buildings}",
             f"  Slots     : {self.n_slots} × {self.resolution_minutes} min",
-            f"",
-            f"  DEMAND & SERVICE",
+            "",
+            "  DEMAND & SERVICE",
             f"    Total demand        : {self.total_demand_kwh:,.1f} kWh",
             f"    Total served        : {self.total_served_kwh:,.1f} kWh",
             f"    Service ratio       : {self.overall_service_ratio:.2%}",
@@ -187,27 +186,27 @@ class CampusMetrics:
             f"({self.total_critical_shortfall_events} events)",
             f"    Deferred            : {self.total_deferred_kwh:.1f} kWh",
             f"    Curtailed           : {self.total_curtailed_kwh:.1f} kWh",
-            f"",
-            f"  SUPPLY",
+            "",
+            "  SUPPLY",
             f"    Grid                : {self.total_grid_kwh:,.1f} kWh",
             f"    Solar               : {self.total_solar_kwh:,.1f} kWh",
             f"    Battery discharge   : {self.total_battery_discharge_kwh:,.1f} kWh",
             f"    Renewable fraction  : {self.renewable_penetration_rate:.1%}",
             f"    Total cost          : {self.total_procurement_cost:,.2f}",
-            f"",
-            f"  MARKET",
+            "",
+            "  MARKET",
             f"    Scarcity slots      : {self.market.scarcity_slots}",
             f"    Re-auction slots    : {self.market.re_auction_slots}",
             f"    Market failures     : {self.market.market_failure_slots}",
             f"    Avg clearing price  : {self.market.avg_clearing_price}",
             f"    Supply utilization  : {self.market.supply_utilization:.2%}",
-            f"",
-            f"  FAIRNESS",
+            "",
+            "  FAIRNESS",
             f"    Jain's index (avg)  : {self.fairness.jains_index:.4f}",
             f"    Jain's index (final): {self.fairness.jains_index_final:.4f}",
             f"    Min service ratio   : {self.fairness.min_building_service_ratio:.2%}",
             f"    Max service ratio   : {self.fairness.max_building_service_ratio:.2%}",
-            f"",
+            "",
             f"  EVENTS : {self.n_events}",
             f"  ENERGY CONSERVATION : {'OK' if self.conservation.is_conserved else 'WARNING'}",
             f"{'=' * 70}",

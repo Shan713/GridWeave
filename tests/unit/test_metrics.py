@@ -1,12 +1,9 @@
 """Unit tests for the MetricsAggregator and CampusMetrics."""
 from __future__ import annotations
 
-import math
-import pytest
-
 from gridweave.auction import AuctionEngine, GreedyAllocationStrategy
 from gridweave.config.settings import synthetic_campus
-from gridweave.coordinator import Coordinator, MetricsAggregator, NORMAL, SCARCITY
+from gridweave.coordinator import Coordinator, MetricsAggregator
 from gridweave.coordinator.metrics import (
     CampusMetrics,
     EnergyConservationMetrics,
@@ -16,7 +13,6 @@ from gridweave.coordinator.metrics import (
 )
 from gridweave.factory import build_agents, build_simulators
 from gridweave.supply.provider import CampusSupplyProvider
-
 
 _SUPPLY_CFG = {
     "sources": [

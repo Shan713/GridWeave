@@ -6,19 +6,15 @@ web dashboard and the native Python dashboard.
 """
 from __future__ import annotations
 
-import pytest
-
 from gridweave.auction import AuctionEngine, GreedyAllocationStrategy
 from gridweave.config.settings import synthetic_campus
 from gridweave.coordinator import (
     Coordinator,
     MetricsAggregator,
     SimulationResult,
-    SlotRecord,
 )
 from gridweave.factory import build_agents, build_simulators
 from gridweave.supply.provider import CampusSupplyProvider
-
 
 _SUPPLY_CFG = {
     "sources": [
