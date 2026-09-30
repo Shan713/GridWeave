@@ -137,7 +137,9 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
   </section>
 
   <section class="charts-grid" id="battery-section">
-    <div class="chart-box"><h2>Battery: State of Charge &amp; Discharge</h2><canvas id="batteryChart" height="120"></canvas></div>
+    <div class="chart-box"><h2>Battery: State of Charge &amp; Discharge</h2>
+      <canvas id="batteryChart" height="70"></canvas>
+      <canvas id="dischargeChart" height="55" style="margin-top:10px"></canvas></div>
     <div class="chart-box">
       <h2>When Is the Battery Used? Offer Price vs Grid Price</h2>
       <canvas id="priceChart" height="240"></canvas>
@@ -320,12 +322,16 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
       const hasBattery = (s.battery_soc || []).some(v => v !== null);
       document.getElementById('battery-section').style.display = hasBattery ? '' : 'none';
       if (!hasBattery) return;
-      draw('batteryChart', { data: { labels, datasets: [
-          { type: 'line', label: 'State of charge (%)', data: s.battery_soc.map(v => v === null ? null : v * 100), borderColor: '#8b5cf6', borderWidth: 2, pointRadius: 0, yAxisID: 'soc' },
-          { type: 'bar', label: 'Battery discharge (kW)', data: s.battery_discharge_kw, backgroundColor: '#f59e0b', yAxisID: 'kw' } ] },
+      // Two single-axis charts (charge % and discharge kW) instead of one dual-axis chart.
+      draw('batteryChart', { type: 'line', data: { labels, datasets: [
+          { label: 'State of charge (%)', data: s.battery_soc.map(v => v === null ? null : v * 100), borderColor: '#8b5cf6', borderWidth: 2, pointRadius: 0 } ] },
         options: { responsive: true, animation: false, scales: {
-          soc: { position: 'left', min: 0, max: 100, title: { display: true, text: 'SOC %', color: '#94a3b8' }, grid: gridColor },
-          kw: { position: 'right', beginAtZero: true, title: { display: true, text: 'kW', color: '#94a3b8' }, grid: { drawOnChartArea: false } },
+          y: { min: 0, max: 100, title: { display: true, text: 'Charge %', color: '#94a3b8' }, grid: gridColor },
+          x: { grid: gridColor, ticks: { display: false } } }, plugins: { legend } } });
+      draw('dischargeChart', { type: 'bar', data: { labels, datasets: [
+          { label: 'Battery discharge (kW)', data: s.battery_discharge_kw, backgroundColor: '#f59e0b' } ] },
+        options: { responsive: true, animation: false, scales: {
+          y: { beginAtZero: true, title: { display: true, text: 'kW', color: '#94a3b8' }, grid: gridColor },
           x: xAxis }, plugins: { legend } } });
       draw('priceChart', { type: 'line', data: { labels, datasets: [
           { label: 'Grid price', data: s.grid_price, borderColor: '#3b82f6', borderWidth: 2, pointRadius: 0, stepped: true },
