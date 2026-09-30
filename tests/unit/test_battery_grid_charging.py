@@ -96,6 +96,50 @@ def test_charging_stops_at_max_soc():
     assert battery.soc == pytest.approx(battery.max_soc)
 
 
+# ------------------------------------------------------------------ offer pricing
+def test_offer_price_is_wear_cost_until_energy_is_bought():
+    battery = BatteryStorageAgent("b", capacity_kwh=100.0, initial_soc=0.8, degradation_cost_per_kwh=7.0)
+    assert battery.get_offer(NOON).marginal_price == pytest.approx(7.0)   # unchanged default behaviour
+
+
+def test_grid_charged_energy_raises_the_offer_price():
+    p, grid, battery = provider(soc=0.1)                                   # empty: at its 10% physical minimum
+    run_slot(p, NIGHT, grid_request_kw=10.0)                                # charge at the 5/kWh off-peak tariff
+    tariff = grid.current_tariff(NIGHT)
+    expected = 7.0 + tariff / (battery.charge_efficiency * battery.discharge_efficiency)
+    assert battery.get_offer(NOON).marginal_price == pytest.approx(expected, abs=0.01)   # ~12.54
+    assert battery.get_offer(NOON).constraints["energy_cost_per_kwh"] > 0
+
+
+def test_price_is_weighted_average_of_energy_sources():
+    battery = BatteryStorageAgent("b", capacity_kwh=100.0, initial_soc=0.2, min_soc=0.2, max_charge_kw=40.0)
+    battery.charge(40.0, NIGHT, source_price_per_kwh=0.0)                  # 9.5 kWh of free solar energy
+    battery.charge(40.0, NIGHT, source_price_per_kwh=10.0)                 # 9.5 kWh bought at 10 (100 spent)
+    per_stored_kwh = 100.0 / 19.0
+    assert battery.energy_cost_per_kwh == pytest.approx(per_stored_kwh / battery.discharge_efficiency)
+    battery.reset()
+    assert battery.energy_cost_per_kwh == 0.0
+
+
+def test_discharge_does_not_change_the_unit_cost():
+    battery = BatteryStorageAgent("b", capacity_kwh=100.0, initial_soc=0.2, min_soc=0.2)
+    battery.charge(40.0, NIGHT, source_price_per_kwh=5.0)
+    before = battery.energy_cost_per_kwh
+    battery.dispatch(DispatchRequest("b", NOON, 5.0))
+    assert battery.energy_cost_per_kwh == pytest.approx(before)
+
+
+def test_grid_charged_battery_is_saved_for_the_evening_peak():
+    """With cost-based pricing the market no longer spends grid-charged energy at the 10/kWh
+    standard tariff; it uses it when the grid costs 18/kWh (17:00-22:00) or during an outage."""
+    result, supply = _run("normal")
+    battery_id = supply.battery_agents[0].source_id
+    later_days = [s for s in result.slots if s.time_slot.start.date() > result.slots[0].time_slot.start.date()]
+    used_hours = {s.time_slot.start.hour for s in later_days
+                  for d in s.dispatch_results if d.source_id == battery_id and d.delivered_kw > 0}
+    assert used_hours and used_hours <= set(range(17, 22))
+
+
 def test_invalid_charge_window_rejected():
     with pytest.raises(ValidationError):
         CampusSupplyProvider([], [], [], grid_charge_hours=(6.0, 2.0))

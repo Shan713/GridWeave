@@ -125,7 +125,7 @@ class CampusSupplyProvider:
             for b in self.battery_agents:
                 if surplus_solar_kw <= 0.01:
                     break
-                absorbed_kw = b.charge(surplus_solar_kw, slot)
+                absorbed_kw = b.charge(surplus_solar_kw, slot, source_price_per_kwh=0.0)
                 surplus_solar_kw -= absorbed_kw
                 total_battery_charged_kw += absorbed_kw
 
@@ -188,7 +188,7 @@ class CampusSupplyProvider:
                 imported = grid.import_for_storage(want_kw, slot, delivered.get(grid.source_id, 0.0))
                 if imported <= 0.0:
                     continue
-                accepted = battery.charge(imported, slot)
+                accepted = battery.charge(imported, slot, source_price_per_kwh=grid.current_tariff(slot))
                 # battery accepted <= imported by construction (imported <= its own charge limit)
                 delivered[grid.source_id] = delivered.get(grid.source_id, 0.0) + accepted
                 total += accepted
