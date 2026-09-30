@@ -37,11 +37,21 @@ class CampusSupplyProvider:
         solar_agents: Sequence[SolarEnergyAgent] | None = None,
         battery_agents: Sequence[BatteryStorageAgent] | None = None,
         auto_charge_surplus_solar: bool = True,
+        grid_charge_off_peak: bool = True,
+        grid_charge_hours: tuple[float, float] = (0.0, 6.0),
     ) -> None:
         self.grid_agents = [GridSupplyAgent()] if grid_agents is None else list(grid_agents)
         self.solar_agents = [SolarEnergyAgent()] if solar_agents is None else list(solar_agents)
         self.battery_agents = [BatteryStorageAgent()] if battery_agents is None else list(battery_agents)
         self.auto_charge_surplus_solar = auto_charge_surplus_solar
+        # Surplus solar rarely exists on a campus (solar is the cheapest source, so the
+        # market uses all of it), so without a grid path the battery empties once and
+        # never recovers. Off-peak grid charging refills it with cheap night energy.
+        start, end = (float(h) for h in grid_charge_hours)
+        if not 0.0 <= start < end <= 24.0:
+            raise ValidationError(f"grid_charge_hours must satisfy 0 <= start < end <= 24, got {grid_charge_hours}")
+        self.grid_charge_off_peak = grid_charge_off_peak
+        self.grid_charge_hours = (start, end)
 
         # Index all sources by unique source_id
         all_sources: list[Any] = [*self.grid_agents, *self.solar_agents, *self.battery_agents]
@@ -119,6 +129,10 @@ class CampusSupplyProvider:
                 surplus_solar_kw -= absorbed_kw
                 total_battery_charged_kw += absorbed_kw
 
+        # 2b. Off-peak grid charging from spare grid capacity (never displaces campus supply)
+        grid_to_battery_kw = self._charge_from_grid(slot, results)
+        total_battery_charged_kw += grid_to_battery_kw
+
         # 3. Supply ledger & conservation audit
         grid_tariff = (
             self.grid_agents[0].current_tariff(slot) if self.grid_agents else 10.0
@@ -143,10 +157,43 @@ class CampusSupplyProvider:
             grid_tariff=grid_tariff,
             battery_deg_rate=batt_deg,
             source_types=self.source_types,
+            grid_to_battery_kw=grid_to_battery_kw,
         )
         self._settled_slots.add(slot)
 
         return results
+
+    def _in_grid_charge_window(self, slot: TimeSlot) -> bool:
+        mid = slot.start.hour + (slot.start.minute + slot.duration_minutes / 2.0) / 60.0
+        start, end = self.grid_charge_hours
+        return start <= mid < end
+
+    def _charge_from_grid(self, slot: TimeSlot, results: Sequence[DispatchResult]) -> float:
+        """Charge batteries from spare grid capacity during the off-peak window.
+
+        A battery that discharged in this slot is not charged (charge and discharge
+        are mutually exclusive per slot). Returns total grid power imported for storage.
+        """
+        if not (self.grid_charge_off_peak and self.grid_agents and self._in_grid_charge_window(slot)):
+            return 0.0
+        delivered = {r.source_id: r.delivered_kw for r in results}
+        total = 0.0
+        for battery in self.battery_agents:
+            if delivered.get(battery.source_id, 0.0) > 0.0:
+                continue
+            want_kw = battery.available_charge_kw(slot)
+            for grid in self.grid_agents:
+                if want_kw <= 0.01:
+                    break
+                imported = grid.import_for_storage(want_kw, slot, delivered.get(grid.source_id, 0.0))
+                if imported <= 0.0:
+                    continue
+                accepted = battery.charge(imported, slot)
+                # battery accepted <= imported by construction (imported <= its own charge limit)
+                delivered[grid.source_id] = delivered.get(grid.source_id, 0.0) + accepted
+                total += accepted
+                want_kw -= accepted
+        return total
 
     # -------------------------------------------------------------------------
     # System Telemetry, Reset, and Metrics
@@ -206,4 +253,6 @@ class CampusSupplyProvider:
             solar_agents=solar_agents,
             battery_agents=battery_agents,
             auto_charge_surplus_solar=bool(config.get("auto_charge_surplus_solar", True)),
+            grid_charge_off_peak=bool(config.get("grid_charge_off_peak", True)),
+            grid_charge_hours=tuple(config.get("grid_charge_hours", (0.0, 6.0))),
         )

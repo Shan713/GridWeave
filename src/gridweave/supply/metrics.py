@@ -26,6 +26,7 @@ class SupplyMetrics:
     total_procurement_cost: float
     levelized_cost_per_kwh: float
     co2_displaced_kg: float
+    grid_to_battery_kwh: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -44,6 +45,7 @@ class SupplyMetrics:
             "total_procurement_cost": round(self.total_procurement_cost, 2),
             "levelized_cost_per_kwh": round(self.levelized_cost_per_kwh, 4),
             "co2_displaced_kg": round(self.co2_displaced_kg, 2),
+            "grid_to_battery_kwh": round(self.grid_to_battery_kwh, 2),
         }
 
 
@@ -68,7 +70,9 @@ class SupplyMetricsCalculator:
         self_cons_rate = (gen - curt) / gen if gen > 0 else 1.0
         renew_rate = s["cumulative_solar_del_kwh"] / deliv if deliv > 0 else 0.0
         cycles = (disch + chg) / (2.0 * battery_nominal_capacity_kwh) if battery_nominal_capacity_kwh > 0 else 0.0
-        co2_disp = (s["cumulative_solar_del_kwh"] + disch) * grid_co2_kg_per_kwh
+        grid_to_batt = s.get("cumulative_grid_to_batt_kwh", 0.0)
+        # Battery energy that came from the grid displaces no grid emissions.
+        co2_disp = (s["cumulative_solar_del_kwh"] + max(0.0, disch - grid_to_batt)) * grid_co2_kg_per_kwh
 
         return SupplyMetrics(
             total_energy_delivered_kwh=s["cumulative_delivered_kwh"],
@@ -86,4 +90,5 @@ class SupplyMetricsCalculator:
             total_procurement_cost=s["cumulative_total_cost"],
             levelized_cost_per_kwh=s["levelized_cost_per_kwh"],
             co2_displaced_kg=co2_disp,
+            grid_to_battery_kwh=grid_to_batt,
         )

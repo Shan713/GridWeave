@@ -127,6 +127,25 @@ class GridSupplyAgent:
             },
         )
 
+    def import_for_storage(self, power_kw: float, slot: TimeSlot, already_delivered_kw: float = 0.0) -> float:
+        """Import power for on-site storage (battery charging), outside the market.
+
+        Uses only spare capacity (``available - already_delivered_kw``) so campus
+        supply is never displaced. The import and its cost are recorded like any
+        other grid import. Returns the accepted power (kW).
+        """
+        if power_kw <= 0.0:
+            return 0.0
+        spare = max(0.0, self.available_kw(slot) - already_delivered_kw)
+        accepted = min(power_kw, spare)
+        if accepted <= 0.0:
+            return 0.0
+        energy_kwh = accepted * slot.hours
+        self.state.total_imported_kwh += energy_kwh
+        self.state.total_cost += energy_kwh * self.current_tariff(slot)
+        self.state.peak_imported_kw = max(self.state.peak_imported_kw, already_delivered_kw + accepted)
+        return round(accepted, 6)
+
     def trigger_outage(self) -> None:
         """Simulate unexpected grid blackout event."""
         self.profile.set_emergency_outage(True)
