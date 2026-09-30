@@ -68,7 +68,11 @@ Everything in `gridweave.mocks` is a **test double** for P2/P3/P4. It is not the
 
 - P1 does **not** guarantee critical-load service. It identifies, requests and reports; P2/P3/P4 decide.
 - P1 does **not** implement market clearing, physical supply, or global re-auction policy.
-- Forecasts are statistical baselines (moving average, EWMA, seasonal). They are not machine learning.
+- The default forecaster is a small learned model (ridge-regression seasonal autoregression), and four
+  statistical baselines remain available. There are no neural networks or external ML libraries.
+  *Post-freeze note (2026-09-30): `LinearARForecaster` was added behind the existing
+  `BaseForecaster` interface, and the default config switched to it. No contract, model or protocol
+  changed; `CONTRACT_VERSION` stays 2.0.*
 - The demand dataset is synthetic. It is not measured, and it favours seasonal forecasters.
 - The value of demand response depends on P2's market mechanism. In the mock market it is negligible.
 - Scalability evidence covers the current sequential, single-process simulation (up to 500 agents),

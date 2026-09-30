@@ -79,7 +79,7 @@ There are no cycles (verified by import order and by the audit). `agents` never 
 | Strict 15-min grid; gaps rejected, not repaired | Seasonal models index history by position; silent correction would hide data errors |
 | One configurable `BuildingAgent` class with injected strategies | N buildings is a configuration change, not a code change |
 | Protocols instead of base classes for cross-team interfaces | Teammates never inherit from P1 code |
-| Deterministic, explainable numerics (no LLM, no ML) | Reproducible experiments. Every bid carries an `explanation` |
+| Deterministic, explainable numerics (no LLM; the only learned component is a ridge-regression forecaster) | Reproducible experiments. Every bid carries an `explanation` |
 | Seeded generators with CRC32-derived per-building seeds | Identical results across machines; adding a building never changes the others |
 
 ## Scalability: what has actually been measured
