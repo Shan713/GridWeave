@@ -67,7 +67,8 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
 
   <section class="grid-kpis">
     <div class="kpi-card"><div class="kpi-title">Total Demand</div><div class="kpi-val" id="kpi-demand">0 kWh</div><div class="kpi-sub" id="kpi-served-sub">Served: 0 kWh</div></div>
-    <div class="kpi-card"><div class="kpi-title">Service Ratio</div><div class="kpi-val" id="kpi-svc-ratio">0%</div><div class="kpi-sub" id="kpi-curt-sub">Curtailed: 0 kWh</div></div>
+    <div class="kpi-card"><div class="kpi-title">Service Ratio</div><div class="kpi-val" id="kpi-svc-ratio">0%</div><div class="kpi-sub" id="kpi-unserved-sub">Unserved: 0 kWh</div></div>
+    <div class="kpi-card"><div class="kpi-title">Critical Load Served</div><div class="kpi-val" id="kpi-crit-ratio">0%</div><div class="kpi-sub" id="kpi-crit-sub">Shortfall: 0 kWh</div></div>
     <div class="kpi-card"><div class="kpi-title">Jain's Fairness Index</div><div class="kpi-val" id="kpi-fairness">0.0000</div><div class="kpi-sub">Min 0.0 — Max 1.0</div></div>
     <div class="kpi-card"><div class="kpi-title">Re-Auctions</div><div class="kpi-val" id="kpi-reauctions">0</div><div class="kpi-sub" id="kpi-events-sub">Events: 0</div></div>
   </section>
@@ -92,13 +93,16 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
             <th>Building ID</th>
             <th>Demand (kWh)</th>
             <th>Served (kWh)</th>
-            <th>Deferred (kWh)</th>
+            <th>Critical Short (kWh)</th>
             <th>Curtailed (kWh)</th>
+            <th>Expired (kWh)</th>
+            <th>Deferred* (kWh)</th>
             <th>Service Ratio</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
+      <div class="kpi-sub" style="margin-top: 8px;">* Deferred is a flow, not an outcome: deferred energy is later served, expires, or is still queued. Demand = Served + Critical Short + Curtailed + Expired + Still Queued.</div>
     </div>
     <div class="chart-box">
       <h2>Scenario Event Log</h2>
@@ -119,7 +123,14 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
       document.getElementById('kpi-demand').innerText = (metrics.total_demand_kwh || 0).toFixed(1) + ' kWh';
       document.getElementById('kpi-served-sub').innerText = `Served: ${(metrics.total_served_kwh || 0).toFixed(1)} kWh`;
       document.getElementById('kpi-svc-ratio').innerText = ((metrics.overall_service_ratio || 0) * 100).toFixed(1) + '%';
-      document.getElementById('kpi-curt-sub').innerText = `Curtailed: ${(metrics.total_curtailed_kwh || 0).toFixed(1)} kWh`;
+      const f1 = v => (v || 0).toFixed(1);
+      document.getElementById('kpi-unserved-sub').innerText =
+        `Unserved ${f1(metrics.total_unserved_kwh)} kWh: critical ${f1(metrics.total_critical_shortfall_kwh)}, ` +
+        `curtailed ${f1(metrics.total_curtailed_kwh)}, expired ${f1(metrics.total_expired_kwh)}, ` +
+        `queued ${f1(metrics.total_backlog_remaining_kwh)}`;
+      document.getElementById('kpi-crit-ratio').innerText = ((metrics.critical_service_ratio ?? 1) * 100).toFixed(1) + '%';
+      document.getElementById('kpi-crit-sub').innerText =
+        `Shortfall: ${f1(metrics.total_critical_shortfall_kwh)} kWh in ${metrics.total_critical_shortfall_events || 0} events`;
       document.getElementById('kpi-fairness').innerText = (metrics.fairness ? metrics.fairness.jains_index_final : 1.0).toFixed(4);
       document.getElementById('kpi-reauctions').innerText = metrics.market ? metrics.market.re_auction_slots : 0;
       document.getElementById('kpi-events-sub').innerText = `Events: ${metrics.n_events || 0}`;
@@ -130,17 +141,17 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
       if (metrics.building_summaries) {
         Object.entries(metrics.building_summaries).forEach(([id, bm]) => {
           const tr = document.createElement('tr');
-          const demand = bm.demand_kwh || bm.requested_kwh || 0;
+          const demand = bm.demand_kwh || 0;
           const served = bm.served_kwh || 0;
-          const deferred = bm.deferred_kwh || 0;
-          const curtailed = bm.curtailed_kwh || 0;
-          const svcRatio = bm.service_ratio || (demand > 0 ? served / demand : 1.0);
+          const svcRatio = bm.service_ratio ?? (demand > 0 ? served / demand : 1.0);
 
           tr.innerHTML = `<td><strong>${id}</strong></td>
                           <td>${demand.toFixed(1)}</td>
                           <td>${served.toFixed(1)}</td>
-                          <td>${deferred.toFixed(1)}</td>
-                          <td>${curtailed.toFixed(1)}</td>
+                          <td>${(bm.critical_shortfall_kwh || 0).toFixed(1)} (${bm.critical_shortfall_events || 0})</td>
+                          <td>${(bm.curtailed_kwh || 0).toFixed(1)}</td>
+                          <td>${(bm.expired_kwh || 0).toFixed(1)}</td>
+                          <td>${(bm.deferred_kwh || 0).toFixed(1)}</td>
                           <td><strong>${(svcRatio * 100).toFixed(1)}%</strong></td>`;
           tbody.appendChild(tr);
         });
@@ -172,18 +183,19 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
       // Building Chart
       if (metrics.building_summaries) {
         const bldgNames = Object.keys(metrics.building_summaries);
-        const bldgServed = bldgNames.map(k => metrics.building_summaries[k].served_kwh || 0);
-        const bldgDef = bldgNames.map(k => metrics.building_summaries[k].deferred_kwh || 0);
-        const bldgCurt = bldgNames.map(k => metrics.building_summaries[k].curtailed_kwh || 0);
+        // Segments are end states that partition each building's demand exactly.
+        const seg = key => bldgNames.map(k => metrics.building_summaries[k][key] || 0);
 
         new Chart(document.getElementById('buildingChart'), {
           type: 'bar',
           data: {
             labels: bldgNames,
             datasets: [
-              { label: 'Served', data: bldgServed, backgroundColor: '#10b981' },
-              { label: 'Deferred', data: bldgDef, backgroundColor: '#3b82f6' },
-              { label: 'Curtailed', data: bldgCurt, backgroundColor: '#ef4444' }
+              { label: 'Served', data: seg('served_kwh'), backgroundColor: '#10b981' },
+              { label: 'Critical shortfall', data: seg('critical_shortfall_kwh'), backgroundColor: '#ef4444' },
+              { label: 'Curtailed', data: seg('curtailed_kwh'), backgroundColor: '#f59e0b' },
+              { label: 'Expired', data: seg('expired_kwh'), backgroundColor: '#8b5cf6' },
+              { label: 'Still queued', data: seg('final_backlog_kwh'), backgroundColor: '#3b82f6' }
             ]
           },
           options: {
