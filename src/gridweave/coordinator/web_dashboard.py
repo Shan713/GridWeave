@@ -49,7 +49,7 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
     .kpi-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
     .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 24px; }
     @media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
-    .chart-box { background: var(--card-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+    .chart-box { background: var(--card-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); min-width: 0; overflow-x: auto; }
     .chart-box h2 { font-size: 1rem; margin-bottom: 16px; color: var(--text-main); }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
@@ -70,6 +70,7 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
     <div class="kpi-card"><div class="kpi-title">Service Ratio</div><div class="kpi-val" id="kpi-svc-ratio">0%</div><div class="kpi-sub" id="kpi-unserved-sub">Unserved: 0 kWh</div></div>
     <div class="kpi-card"><div class="kpi-title">Critical Load Served</div><div class="kpi-val" id="kpi-crit-ratio">0%</div><div class="kpi-sub" id="kpi-crit-sub">Shortfall: 0 kWh</div></div>
     <div class="kpi-card"><div class="kpi-title">Jain's Fairness Index</div><div class="kpi-val" id="kpi-fairness">0.0000</div><div class="kpi-sub">Min 0.0 — Max 1.0</div></div>
+    <div class="kpi-card"><div class="kpi-title">Battery</div><div class="kpi-val" id="kpi-battery">0 kWh</div><div class="kpi-sub" id="kpi-battery-sub">Discharged · recharged from grid</div></div>
     <div class="kpi-card"><div class="kpi-title">Re-Auctions</div><div class="kpi-val" id="kpi-reauctions">0</div><div class="kpi-sub" id="kpi-events-sub">Events: 0</div></div>
   </section>
 
@@ -81,6 +82,18 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
     <div class="chart-box">
       <h2>Energy Served vs Shortfall by Building</h2>
       <canvas id="buildingChart" height="240"></canvas>
+    </div>
+  </section>
+
+  <section class="charts-grid" id="battery-section">
+    <div class="chart-box">
+      <h2>Battery: State of Charge &amp; Discharge</h2>
+      <canvas id="batteryChart" height="120"></canvas>
+    </div>
+    <div class="chart-box">
+      <h2>When Is the Battery Used? Offer Price vs Grid Price</h2>
+      <canvas id="priceChart" height="240"></canvas>
+      <div class="kpi-sub" style="margin-top: 8px;">The battery offers at its wear cost plus the cost of its stored energy. The market uses it when the grid price is higher (evening peak), or when the grid is out.</div>
     </div>
   </section>
 
@@ -206,6 +219,54 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
         });
       }
 
+      // Battery section
+      const series = metrics.series || {};
+      const hasBattery = (series.battery_soc || []).some(v => v !== null);
+      document.getElementById('kpi-battery').innerText = `${f1(metrics.total_battery_discharge_kwh)} kWh`;
+      document.getElementById('kpi-battery-sub').innerText = hasBattery
+        ? `Discharged · ${f1(metrics.total_grid_to_battery_kwh)} kWh recharged from grid off-peak`
+        : 'No battery in this run';
+      if (!hasBattery) {
+        document.getElementById('battery-section').style.display = 'none';
+      } else {
+        const axisColor = { color: '#2a364f' };
+        new Chart(document.getElementById('batteryChart'), {
+          data: {
+            labels: labels,
+            datasets: [
+              { type: 'line', label: 'State of charge (%)', data: series.battery_soc.map(v => v === null ? null : v * 100),
+                borderColor: '#8b5cf6', borderWidth: 2, pointRadius: 0, yAxisID: 'soc' },
+              { type: 'bar', label: 'Battery discharge (kW)', data: series.battery_discharge_kw,
+                backgroundColor: '#f59e0b', yAxisID: 'kw' }
+            ]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              soc: { position: 'left', min: 0, max: 100, title: { display: true, text: 'SOC %', color: '#94a3b8' }, grid: axisColor },
+              kw: { position: 'right', beginAtZero: true, title: { display: true, text: 'kW', color: '#94a3b8' }, grid: { drawOnChartArea: false } },
+              x: { grid: axisColor }
+            },
+            plugins: { legend: { labels: { color: '#e2e8f0' } } }
+          }
+        });
+        new Chart(document.getElementById('priceChart'), {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [
+              { label: 'Grid price', data: series.grid_price, borderColor: '#3b82f6', borderWidth: 2, pointRadius: 0, stepped: true },
+              { label: 'Battery offer price', data: series.battery_offer_price, borderColor: '#8b5cf6', borderWidth: 2, pointRadius: 0, stepped: true }
+            ]
+          },
+          options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true, title: { display: true, text: 'per kWh', color: '#94a3b8' }, grid: axisColor }, x: { grid: axisColor } },
+            plugins: { legend: { labels: { color: '#e2e8f0' } } }
+          }
+        });
+      }
+
       // Event Log
       const evLogEl = document.getElementById('eventLog');
       if (metrics.event_log && metrics.event_log.length > 0) {
@@ -240,6 +301,7 @@ def make_handler(result: SimulationResult):
         bid: bs.to_dict() for bid, bs in result.building_summaries.items()
     }
     metrics_json["event_log"] = [e.to_dict() for e in result.event_log]
+    metrics_json["series"] = metrics.series_dict()
 
     class DashboardHandler(BaseHTTPRequestHandler):
         def log_message(self, format: str, *args: Any) -> None:

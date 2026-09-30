@@ -176,6 +176,23 @@ class CampusMetrics:
     total_expired_kwh: float = 0.0
     total_backlog_remaining_kwh: float = 0.0
 
+    # Storage (per slot; None where the run has no battery / no grid offer)
+    total_grid_to_battery_kwh: float = 0.0
+    slot_battery_soc: tuple[float | None, ...] = ()
+    slot_battery_discharge_kw: tuple[float, ...] = ()
+    slot_battery_offer_price: tuple[float | None, ...] = ()
+    slot_grid_price: tuple[float | None, ...] = ()
+
+    def series_dict(self) -> dict[str, Any]:
+        """Per-slot series for charts (kept out of to_dict to keep exports small)."""
+        return {
+            "timestamps": self.slot_timestamps,
+            "battery_soc": list(self.slot_battery_soc),
+            "battery_discharge_kw": [round(v, 3) for v in self.slot_battery_discharge_kw],
+            "battery_offer_price": list(self.slot_battery_offer_price),
+            "grid_price": list(self.slot_grid_price),
+        }
+
     @property
     def total_unserved_kwh(self) -> float:
         return self.total_demand_kwh - self.total_served_kwh
@@ -250,6 +267,7 @@ class CampusMetrics:
             "total_backlog_remaining_kwh": round(self.total_backlog_remaining_kwh, 2),
             "total_unserved_kwh": round(self.total_unserved_kwh, 2),
             "total_unused_allocation_kwh": round(self.total_unused_allocation_kwh, 2),
+            "total_grid_to_battery_kwh": round(self.total_grid_to_battery_kwh, 2),
             "overall_service_ratio": round(self.overall_service_ratio, 4),
             "critical_service_ratio": round(self.critical_service_ratio, 4),
             "flexible_service_ratio": round(self.flexible_service_ratio, 4),
@@ -337,6 +355,21 @@ class MetricsAggregator:
         svc_ratio    = [r.service_ratio      for r in slots]
         prices       = [r.clearing_price     for r in slots]
         evts         = [r.events_triggered   for r in slots]
+
+        # --- storage series (read from offers/dispatch, so any SupplyProvider works) ---
+        batt_soc: list[float | None] = []
+        batt_disch: list[float] = []
+        batt_price: list[float | None] = []
+        grid_price: list[float | None] = []
+        for r in slots:
+            batteries = [o for o in r.offers if o.source_type.value == "battery"]
+            grids = [o for o in r.offers if o.source_type.value == "grid"]
+            socs = [float(o.constraints["soc"]) for o in batteries if "soc" in o.constraints]
+            batt_soc.append(round(sum(socs) / len(socs), 4) if socs else None)
+            batt_ids = {o.source_id for o in batteries}
+            batt_disch.append(sum(d.delivered_kw for d in r.dispatch_results if d.source_id in batt_ids))
+            batt_price.append(min(o.marginal_price for o in batteries) if batteries else None)
+            grid_price.append(min(o.marginal_price for o in grids) if grids else None)
 
         # --- campus totals ---
         total_demand   = sum(d * h for d in demand_kw)
@@ -522,4 +555,9 @@ class MetricsAggregator:
             slot_events=evts,
             total_expired_kwh=total_expired,
             total_backlog_remaining_kwh=total_queued,
+            total_grid_to_battery_kwh=float(sm.get("grid_to_battery_kwh", 0.0)),
+            slot_battery_soc=tuple(batt_soc),
+            slot_battery_discharge_kw=tuple(batt_disch),
+            slot_battery_offer_price=tuple(batt_price),
+            slot_grid_price=tuple(grid_price),
         )

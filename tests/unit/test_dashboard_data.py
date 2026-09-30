@@ -236,6 +236,19 @@ class TestDashboardDataLayer:
         for key in ("expired_kwh", "critical_shortfall_kwh", "final_backlog_kwh"):
             assert key in next(iter(data["building_summaries"].values())), key
         assert "Critical Load Served" in page and "kpi-crit-ratio" in page
+        assert "batteryChart" in page and "priceChart" in page
+        assert {"battery_soc", "battery_discharge_kw", "battery_offer_price", "grid_price"} <= set(data["series"])
+
+    def test_battery_series_for_dashboard(self):
+        """Battery SOC, discharge and prices are available per slot and consistent with the run."""
+        result, agents = _run_scarce(steps=48)
+        m = MetricsAggregator.compute(result, agents)
+        s = m.series_dict()
+        n = result.n_slots
+        assert len(s["battery_soc"]) == len(s["battery_discharge_kw"]) == len(s["grid_price"]) == n
+        assert all(v is None or 0.0 <= v <= 1.0 for v in s["battery_soc"])
+        assert sum(s["battery_discharge_kw"]) * 0.25 == pytest.approx(m.total_battery_discharge_kwh, abs=0.1)
+        assert all(p is not None and p > 0 for p in s["battery_offer_price"])
 
     def test_cli_report_shows_critical_and_expired(self):
         from gridweave.coordinator.cli_dashboard import CliDashboard
