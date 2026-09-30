@@ -9,6 +9,7 @@ from gridweave.forecasting.base_forecaster import (
 from gridweave.forecasting.composite import FallbackForecaster
 from gridweave.forecasting.evaluation import BacktestResult, backtest, compare_forecasters
 from gridweave.forecasting.ewma import EWMAForecaster, EWMAPredictor
+from gridweave.forecasting.linear_ar import LinearARForecaster
 from gridweave.forecasting.metrics import bias, mae, mape, rmse
 from gridweave.forecasting.moving_average import MovingAverageForecaster
 from gridweave.forecasting.registry import FORECASTERS, create_forecaster, register_forecaster
@@ -25,6 +26,7 @@ __all__ = [
     "ForecastPoint",
     "InsufficientHistoryError",
     "MovingAverageForecaster",
+    "LinearARForecaster",
     "SeasonalEWMAForecaster",
     "SeasonalNaiveForecaster",
     "SpikeDetector",

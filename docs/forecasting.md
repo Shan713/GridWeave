@@ -1,7 +1,10 @@
 # Forecasting
 
-All forecasters here are **statistical time-series baselines** (moving average, exponential
-smoothing, seasonal repetition). None of them is trained, and none is machine learning.
+Five forecasters share one interface. Four are **statistical time-series baselines** (moving
+average, exponential smoothing, seasonal repetition, seasonal EWMA). One is a **learned model**:
+`LinearARForecaster`, a seasonal linear autoregression fitted by ridge regression on each
+building's own history. That is classical machine learning (least-squares regression). There are no
+neural networks and no external libraries. The learned model is the default.
 
 ## Interface
 
@@ -16,6 +19,9 @@ BaseForecaster
  ├── EWMAForecaster(alpha)  (= EWMAPredictor) baseline 2: exponential smoothing L = a·y + (1−a)·L
  ├── SeasonalNaiveForecaster(season=96)       same slot yesterday
  ├── SeasonalEWMAForecaster(season, a, b)     yesterday's shape + b·EWMA of (today − yesterday)
+ ├── LinearARForecaster(season, window, ridge) learned: y(t+1) = w·[1, y(t), y(t−1), y(t−2), y(t+1−S),
+ │                                             y(t+1−S) − y(t−S)], ridge-fitted on the last 7 days,
+ │                                             refitted every 16 slots, recursive for multi-step
  └── FallbackForecaster(primary, fallback)    use primary once it has enough history
 ```
 
@@ -71,6 +77,7 @@ Reproduce with `python scripts/run_forecast_experiment.py` (takes about 20 s). I
 
 | Method | MAE (kW) | RMSE (kW) | MAPE (%) | Bias (kW) |
 |---|---:|---:|---:|---:|
+| LinearAR (learned) | 3.51 | 5.63 | 7.3 | +0.24 |
 | EWMA(a=0.6) | 4.74 | 7.35 | 8.9 | -0.01 |
 | SeasonalEWMA(96) | 5.04 | 7.86 | 10.9 | +0.36 |
 | MA(4) | 6.50 | 10.11 | 12.4 | -0.02 |
@@ -83,6 +90,7 @@ Reproduce with `python scripts/run_forecast_experiment.py` (takes about 20 s). I
 
 | Method | MAE (kW) | RMSE (kW) | MAPE (%) | Bias (kW) |
 |---|---:|---:|---:|---:|
+| LinearAR (learned) | 5.52 | 9.69 | 12.1 | +0.48 |
 | SeasonalEWMA(96) | 5.89 | 9.31 | 12.9 | +0.40 |
 | EWMA(a=0.6) | 7.81 | 12.64 | 15.2 | -0.08 |
 | SeasonalNaive(96) | 8.19 | 15.81 | 19.5 | +1.78 |
@@ -97,6 +105,7 @@ Reproduce with `python scripts/run_forecast_experiment.py` (takes about 20 s). I
 
 | Method | MAE (kW) | RMSE (kW) | MAPE (%) | Bias (kW) |
 |---|---:|---:|---:|---:|
+| LinearAR (learned) | 3.37 | 5.28 | 7.0 | +0.20 |
 | EWMA(a=0.6) | 4.68 | 7.27 | 8.8 | -0.01 |
 | SeasonalEWMA(96) | 4.94 | 7.90 | 10.7 | +0.41 |
 | MA(4) | 6.44 | 10.07 | 12.3 | -0.01 |
@@ -109,6 +118,7 @@ Reproduce with `python scripts/run_forecast_experiment.py` (takes about 20 s). I
 
 | Method | MAE (kW) | RMSE (kW) | MAPE (%) | Bias (kW) |
 |---|---:|---:|---:|---:|
+| LinearAR (learned) | 5.37 | 9.27 | 11.6 | +0.46 |
 | SeasonalEWMA(96) | 5.85 | 9.50 | 12.8 | +0.46 |
 | EWMA(a=0.6) | 7.74 | 12.64 | 15.1 | -0.06 |
 | SeasonalNaive(96) | 8.25 | 16.04 | 19.6 | +1.99 |
@@ -117,40 +127,47 @@ Reproduce with `python scripts/run_forecast_experiment.py` (takes about 20 s). I
 | MA(8) | 12.46 | 18.98 | 25.8 | -0.08 |
 | *Oracle (noise-free template)* | 2.95 | 4.47 | 5.2 | -0.25 |
 
-
 ### Interpretation (limited to this synthetic dataset)
 
-* **Next slot (h = 1):** EWMA (α = 0.6) had the lowest error on the held-out seeds (MAE 4.74 kW),
-  ahead of Seasonal EWMA (5.04). The AR(1) noise in the generator makes the latest reading the
-  strongest short-term signal.
-* **One hour ahead (h = 4):** Seasonal EWMA performed best on the held-out seeds (MAE 5.89 vs
-  7.81 kW, RMSE 9.31 vs 12.64). Flat forecasts cannot anticipate the evening ramp.
-* The held-out ranking matches the development ranking, so the choice made on development seeds
-  transferred to unseen seeds of the **same generator**. That is all it shows.
-* All methods remain well above the noise-free oracle (MAE about 3 kW), which is the floor set by the
-  generator's noise.
+* **Next slot (h = 1), which is what buildings bid on:** the learned LinearAR model had the lowest
+  error on the held-out seeds, with MAE 3.51 kW against 4.74 for the best baseline (EWMA α=0.6). That
+  is about 26% better, and close to the noise floor set by the generator (oracle MAE about 3.0 kW).
+  It combines what the baselines each capture separately: the latest readings (short-term momentum)
+  and the same slot yesterday (the daily shape).
+* **One hour ahead (h = 4):** LinearAR has the lowest MAE (5.52 vs 5.89 for Seasonal EWMA). Its
+  RMSE is slightly *higher* (9.69 vs 9.31). Feeding its own predictions back in occasionally
+  compounds into larger misses, and RMSE weights those heavily. So at 1 hour ahead the two are
+  roughly tied, not a clear win.
+* The held-out ranking matches the development ranking, so the choice transferred to unseen seeds of
+  the **same generator**. That is all it shows.
 
-**Correct wording for reports:** "Seasonal EWMA performed best one hour ahead, and EWMA (α = 0.6) one
-slot ahead, on held-out seeds of our synthetic campus demand." Do **not** say "Seasonal EWMA is the best
-forecasting model": the data was generated from a repeating daily template, which structurally
-favours seasonal methods (see [demand_model.md](demand_model.md)).
+**Correct wording for reports:** "On held-out seeds of our synthetic campus demand, a ridge-fitted
+seasonal linear autoregression reduced next-slot forecast error by about 26% compared with the best
+statistical baseline." Do **not** claim it is the best model in general. The data comes from a
+repeating daily template with AR(1) noise, which a linear seasonal-autoregressive model matches
+closely (see [demand_model.md](demand_model.md)). On real meter data a heavier ML model *might*
+help, but there is no evidence for that here.
 
-**Default choice** (packaged `campus_default.json`): `seasonal_ewma`, with an `ewma(α=0.6)` fallback
-for the first day, before 97 samples exist. The agent bids one slot ahead, where EWMA was slightly
-better. Seasonal EWMA was chosen for its robustness across horizons and the multi-step outlook P3
-needs. Switching is a one-line config change.
+**Default choice** (packaged `campus_default.json` and `ForecastSettings`): `linear_ar`, chosen on
+development seeds and confirmed on held-out seeds. It falls back to `ewma(α=0.6)` for the first
+day and a half, before it has the 144 samples it needs. Switching back to `seasonal_ewma` is a
+one-line config change.
 
 ### Forecast errors now have consequences
 
 Since settlements are judged against realised demand, forecast error changes outcomes. The mock
-comparison in `examples/closed_loop_demo.py` (synthetic Tuesday, 5 buildings, mock grid + solar +
-battery) contrasts the default forecaster with a deliberately poor one that predicts yesterday's
-daily mean:
+comparison in `examples/closed_loop_demo.py` (synthetic Wednesday, after two days of history,
+5 buildings, mock grid + solar + battery) contrasts the default forecaster with a deliberately poor
+one that predicts yesterday's daily mean:
 
 | | forecast MAE | critical-shortfall slots | unused allocation |
 |---|---:|---:|---:|
-| default (Seasonal EWMA) | 3.73 kW | 1 | 167 kWh |
-| poor (flat daily mean) | 31.50 kW | 11 | 1,629 kWh |
+| default (LinearAR, learned) | 2.93 kW | 0 | 142 kWh |
+| poor (flat daily mean) | 31.32 kW | 11 | 1,644 kWh |
+
+The learned model needs a day and a half of history before it runs (EWMA covers the start). With
+only one day of history, the same demo gives an MAE of about 4.6 kW, because it is mostly on the
+fallback.
 
 ### Limitations
 

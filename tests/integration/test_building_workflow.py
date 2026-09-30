@@ -88,7 +88,10 @@ def test_forecast_error_reaches_outcomes():
     for s in under:
         assert s.served_kw < s.actual_demand_kw + s.backlog_available_kw - 1e-6
     assert sum(s.status is not AllocationStatus.FULL for s in under) > 0.9 * len(under)
-    assert all(s.unused_allocation_kw > 0 for s in over)
+    # Over-forecasting leaves allocation unused, unless deferred energy was waiting, in which
+    # case the surplus serves that backlog instead (so nothing is wasted in that slot).
+    assert all(s.unused_allocation_kw > 0 or s.backlog_served_kw > 0 for s in over)
+    assert sum(s.unused_allocation_kw > 0 for s in over) > 0.9 * len(over)
 
 
 def test_allocation_changes_future_state():

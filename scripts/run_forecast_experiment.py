@@ -1,4 +1,4 @@
-"""Forecasting experiment: statistical baselines on synthetic campus demand.
+"""Forecasting experiment: statistical baselines and one learned model on synthetic campus demand.
 
 Protocol (identical for every method, so results are comparable):
 * data: every building of the campus config, 7 days at 15-min resolution
@@ -32,6 +32,7 @@ from statistics import fmean
 from gridweave.config import load_campus_config
 from gridweave.forecasting import (
     EWMAForecaster,
+    LinearARForecaster,
     MovingAverageForecaster,
     SeasonalEWMAForecaster,
     SeasonalNaiveForecaster,
@@ -53,6 +54,7 @@ FORECASTERS = [
     ("EWMA(a=0.6)", EWMAForecaster(0.6)),
     ("SeasonalNaive(96)", SeasonalNaiveForecaster(96)),
     ("SeasonalEWMA(96)", SeasonalEWMAForecaster(96, alpha=0.3, beta=0.8)),
+    ("LinearAR (learned)", LinearARForecaster()),
 ]
 ORACLE = "Oracle (noise-free template)"
 DEV_SEEDS, HELDOUT_SEEDS = [42, 43, 44], [101, 102, 103, 104, 105]
