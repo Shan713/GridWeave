@@ -131,8 +131,9 @@ def test_discharge_does_not_change_the_unit_cost():
 
 def test_grid_charged_battery_is_saved_for_the_evening_peak():
     """With cost-based pricing the market no longer spends grid-charged energy at the 10/kWh
-    standard tariff; it uses it when the grid costs 18/kWh (17:00-22:00) or during an outage."""
-    result, supply = _run("normal")
+    standard tariff; it uses it when the grid costs 18/kWh (17:00-22:00) or during an outage.
+    Supply is ample here, so every discharge is a price decision, not a shortage."""
+    result, supply = _run("normal", _AMPLE_SUPPLY)
     battery_id = supply.battery_agents[0].source_id
     later_days = [s for s in result.slots if s.time_slot.start.date() > result.slots[0].time_slot.start.date()]
     used_hours = {s.time_slot.start.hour for s in later_days
@@ -151,8 +152,20 @@ def test_config_keys_are_respected():
     assert p.grid_charge_off_peak is False and p.grid_charge_hours == (1.0, 5.0)
 
 
-def _run(scenario_name):
+# Supply large enough that the battery is never *needed*; isolates price-driven behaviour.
+_AMPLE_SUPPLY = {"sources": [
+    {"type": "grid", "source_id": "grid_main", "nominal_capacity_kw": 400.0},
+    {"type": "solar", "source_id": "solar_roof", "installed_capacity_kw": 200.0},
+    {"type": "battery", "source_id": "battery_main", "capacity_kwh": 150.0, "initial_soc": 0.70},
+]}
+
+
+def _run(scenario_name, supply_config=None):
+    from dataclasses import replace
+
     sc = get_scenario(scenario_name)
+    if supply_config is not None:
+        sc = replace(sc, supply_config=supply_config)
     cfg = synthetic_campus(5, seed=sc.seed)
     supply = CampusSupplyProvider.from_config(sc.supply_config)
     result = Coordinator(build_agents(cfg), build_simulators(cfg), AuctionEngine(), supply, scenario=sc).run()

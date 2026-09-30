@@ -19,12 +19,21 @@ from gridweave.utils.validation import ValidationError
 # Default supply configuration for scenarios
 # ---------------------------------------------------------------------------
 
+# Sizing (5-building synthetic campus, seed 42): demand peaks at ~420 kW between
+# 09:00 and 17:00 with ~185 kW of it critical; night demand is <= ~145 kW.
+# The grid alone (250 kW) cannot carry the daytime peak: the campus depends on
+# its solar array (~270 kW at noon) and battery (100 kW, 300 kWh) to be fully
+# served. So every supply event visibly matters, and a daytime grid outage
+# leaves supply *between* critical and total demand, the regime where the
+# market's allocation choices change who is protected. The previous sizing
+# (grid 400 kW, solar 200 kW, battery 150 kWh) never ran short, so most
+# events had no visible effect.
 _DEFAULT_SUPPLY_CFG: dict[str, Any] = {
     "sources": [
-        {"type": "grid",    "source_id": "grid_main",    "nominal_capacity_kw": 400.0},
-        {"type": "solar",   "source_id": "solar_roof",   "installed_capacity_kw": 200.0},
-        {"type": "battery", "source_id": "battery_main", "capacity_kwh": 150.0,
-         "initial_soc": 0.70},
+        {"type": "grid",    "source_id": "grid_main",    "nominal_capacity_kw": 250.0},
+        {"type": "solar",   "source_id": "solar_roof",   "installed_capacity_kw": 400.0},
+        {"type": "battery", "source_id": "battery_main", "capacity_kwh": 300.0,
+         "initial_soc": 0.70, "max_charge_kw": 100.0, "max_discharge_kw": 100.0},
     ]
 }
 
@@ -211,17 +220,17 @@ SOLAR_DROP = Scenario(
     supply_config=_DEFAULT_SUPPLY_CFG,
 )
 
-#: Grid outage on day 1 evening, restoration day 2 morning.
+#: Daytime grid outage: solar and battery remain, but cannot cover all demand.
 GRID_OUTAGE = Scenario(
     name="grid_outage",
-    description="Grid blackout at slot 72 (18:00 day 1), restored at slot 96 (day 2 start).",
+    description="Grid blackout 11:00-16:00 on day 1 (slots 44-64); solar and battery must be rationed.",
     days=2,
     n_buildings=5,
     seed=42,
     events=(
-        ScheduledEvent(slot_index=72, event_type="grid_outage"),
-        ScheduledEvent(slot_index=72, event_type="emergency_reserve_release"),
-        ScheduledEvent(slot_index=96, event_type="grid_restoration"),
+        ScheduledEvent(slot_index=44, event_type="grid_outage"),
+        ScheduledEvent(slot_index=44, event_type="emergency_reserve_release"),
+        ScheduledEvent(slot_index=64, event_type="grid_restoration"),
     ),
     supply_config=_DEFAULT_SUPPLY_CFG,
 )
@@ -281,23 +290,23 @@ SCARCITY = Scenario(
     negotiation_rounds=2,
 )
 
-#: Mixed stress — grid outage + solar drop + tariff spike.
+#: Mixed stress — cloud cover, then a daytime grid outage and a tariff spike.
 MIXED_STRESS = Scenario(
     name="mixed_stress",
-    description="Simultaneous grid outage, solar cloud event, and tariff spike on day 1.",
+    description="Cloud cover from 10:00 day 1, grid outage and 2x tariff 11:00-16:00, solar recovers on day 2.",
     days=3,
     n_buildings=5,
     seed=42,
     events=(
-        ScheduledEvent(slot_index=48, event_type="solar_drop",
-                       params={"cloud_cover": 0.80}),
-        ScheduledEvent(slot_index=56, event_type="grid_outage"),
-        ScheduledEvent(slot_index=56, event_type="emergency_reserve_release"),
-        ScheduledEvent(slot_index=56, event_type="tariff_spike",
+        ScheduledEvent(slot_index=40, event_type="solar_drop",
+                       params={"cloud_cover": 0.50}),
+        ScheduledEvent(slot_index=44, event_type="grid_outage"),
+        ScheduledEvent(slot_index=44, event_type="emergency_reserve_release"),
+        ScheduledEvent(slot_index=44, event_type="tariff_spike",
                        params={"multiplier": 2.0}),
-        ScheduledEvent(slot_index=96, event_type="grid_restoration"),
+        ScheduledEvent(slot_index=64, event_type="grid_restoration"),
+        ScheduledEvent(slot_index=64, event_type="tariff_normalization"),
         ScheduledEvent(slot_index=96, event_type="solar_recovery"),
-        ScheduledEvent(slot_index=96, event_type="tariff_normalization"),
     ),
     supply_config=_DEFAULT_SUPPLY_CFG,
 )
