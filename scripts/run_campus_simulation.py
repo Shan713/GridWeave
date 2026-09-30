@@ -1,12 +1,15 @@
-"""Run full campus energy simulation with real demand agents, auction market, supply provider, and coordinator.
-
-Command-line interface to run predefined or custom scenarios, export metrics/JSON results,
-launch web dashboard, or output ASCII terminal reports.
+"""Run the full campus energy simulation (P1 agents + P2 market + P3 supply + P4 coordinator).
 
 Examples:
-  python scripts/run_campus_simulation.py --scenario normal --steps 96
-  python scripts/run_campus_simulation.py --scenario solar_drop --web --port 8050
+  python scripts/run_campus_simulation.py --scenario grid_outage --web
+  python scripts/run_campus_simulation.py --scenario grid_outage --compare
+  python scripts/run_campus_simulation.py --scenario mixed_stress --mode equal_share
   python scripts/run_campus_simulation.py --buildings 10 --days 2 --output results.json
+
+Modes (same campus, same demand, same events; only decision-making changes):
+  equal_share     baseline: everyone gets the same fraction of their request
+  critical_first  critical load first, then minimum, then flexible by priority
+  gridweave       welfare-maximising market + demand-response round (default)
 """
 from __future__ import annotations
 
@@ -15,146 +18,92 @@ import json
 import time
 from pathlib import Path
 
-from gridweave.auction import AuctionEngine, GreedyAllocationStrategy, PriorityAllocationStrategy
-from gridweave.config import synthetic_campus
-from gridweave.coordinator import (
-    SCENARIOS,
-    Coordinator,
-    MetricsAggregator,
-    Scenario,
-    get_scenario,
+from gridweave.auction import (
+    GreedyAllocationStrategy,
+    OptimizedAllocationStrategy,
+    PriorityAllocationStrategy,
+    ProportionalAllocationStrategy,
 )
+from gridweave.coordinator import DEFAULT_MODE, MODES, SCENARIOS, MetricsAggregator, run_simulation
 from gridweave.coordinator.cli_dashboard import CliDashboard
-from gridweave.coordinator.web_dashboard import serve_dashboard
-from gridweave.factory import build_agents, build_simulators
-from gridweave.supply import CampusSupplyProvider
+from gridweave.coordinator.web_dashboard import serve_interactive_dashboard
 from gridweave.utils.logging import configure
+
+STRATEGIES = {
+    "greedy": GreedyAllocationStrategy,
+    "optimized": OptimizedAllocationStrategy,
+    "proportional": ProportionalAllocationStrategy,
+    "priority": PriorityAllocationStrategy,
+}
+
+
+def compare_modes(args: argparse.Namespace) -> None:
+    print(f"Scenario: {args.scenario} | same campus, demand and events in every mode\n")
+    print(f"{'mode':<24}{'service':>9}{'critical served':>17}{'crit. shortfall':>17}{'expired':>10}"
+          f"{'fairness':>10}{'cost':>11}")
+    for name, mode in MODES.items():
+        out = run_simulation(args.scenario, name, steps=args.steps, n_buildings=args.buildings,
+                             days=args.days, seed=args.seed)
+        m = MetricsAggregator.compute(out.result, out.agents)
+        print(f"{mode.label:<24}{m.overall_service_ratio:>9.1%}{m.critical_service_ratio:>17.1%}"
+              f"{m.total_critical_shortfall_kwh:>13.1f} kWh{m.total_expired_kwh:>6.0f} kWh"
+              f"{m.fairness.jains_index_final:>10.3f}{m.total_procurement_cost:>11.0f}")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    parser.add_argument(
-        "--scenario",
-        default="normal",
-        choices=sorted(SCENARIOS.keys()),
-        help="predefined scenario name (default: 'normal')",
-    )
-    parser.add_argument(
-        "--buildings",
-        type=int,
-        help="override number of buildings (synthetic campus)",
-    )
-    parser.add_argument(
-        "--steps",
-        type=int,
-        help="number of 15-min slots to run (default: scenario length)",
-    )
-    parser.add_argument(
-        "--days",
-        type=int,
-        help="override number of simulation days",
-    )
-    parser.add_argument(
-        "--strategy",
-        choices=["greedy", "priority"],
-        default="greedy",
-        help="P2 market allocation strategy (default: greedy)",
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        help="master random seed",
-    )
-    parser.add_argument(
-        "--web",
-        action="store_true",
-        help="launch interactive web dashboard after simulation",
-    )
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=8050,
-        help="port for web dashboard server (default: 8050)",
-    )
-    parser.add_argument(
-        "--output",
-        help="path to write JSON simulation results and metrics",
-    )
-    parser.add_argument(
-        "--quiet",
-        action="store_true",
-        help="suppress terminal dashboard output",
-    )
-    parser.add_argument(
-        "--log-level",
-        default="INFO",
-        help="logging level (DEBUG, INFO, WARNING, ERROR)",
-    )
-
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--scenario", default="normal", choices=sorted(SCENARIOS),
+                        help="predefined scenario (default: normal)")
+    parser.add_argument("--mode", default=DEFAULT_MODE, choices=list(MODES),
+                        help=f"decision-making mode (default: {DEFAULT_MODE})")
+    parser.add_argument("--compare", action="store_true", help="run every mode on the scenario and compare")
+    parser.add_argument("--strategy", choices=sorted(STRATEGIES),
+                        help="override the mode's P2 allocation strategy")
+    parser.add_argument("--buildings", type=int, help="override number of buildings (synthetic campus)")
+    parser.add_argument("--steps", type=int, help="number of 15-min slots to run (default: scenario length)")
+    parser.add_argument("--days", type=int, help="override number of simulation days")
+    parser.add_argument("--seed", type=int, help="master random seed")
+    parser.add_argument("--web", action="store_true",
+                        help="open the interactive web dashboard (pick scenario/mode, replay slots)")
+    parser.add_argument("--port", type=int, default=8050, help="web dashboard port (default: 8050)")
+    parser.add_argument("--output", help="path to write JSON simulation results and metrics")
+    parser.add_argument("--quiet", action="store_true", help="suppress terminal dashboard output")
+    parser.add_argument("--log-level", default="WARNING", help="logging level (DEBUG, INFO, WARNING, ERROR)")
     args = parser.parse_args()
     configure(args.log_level)
 
-    scenario = get_scenario(args.scenario)
-    if args.days is not None or args.buildings is not None or args.seed is not None:
-        scenario = Scenario(
-            name=f"{scenario.name}_custom",
-            description=f"{scenario.description} (customized)",
-            days=args.days if args.days is not None else scenario.days,
-            n_buildings=args.buildings if args.buildings is not None else scenario.n_buildings,
-            seed=args.seed if args.seed is not None else scenario.seed,
-            events=scenario.events,
-            supply_config=scenario.supply_config,
-            negotiation_rounds=scenario.negotiation_rounds,
-            on_failure=scenario.on_failure,
-        )
+    if args.compare:
+        compare_modes(args)
+        return
 
-    n_bldg = scenario.n_buildings if scenario.n_buildings > 0 else 5
-    cfg = synthetic_campus(n_bldg, seed=scenario.seed)
-    agents = build_agents(cfg)
-    simulators = build_simulators(cfg)
-
-    strat = PriorityAllocationStrategy() if args.strategy == "priority" else GreedyAllocationStrategy()
-    auction_engine = AuctionEngine(strategy=strat)
-    supply_provider = CampusSupplyProvider.from_config(scenario.supply_config)
-
-    coordinator = Coordinator(
-        agents=agents,
-        environments=simulators,
-        auctioneer=auction_engine,
-        supply=supply_provider,
-        scenario=scenario,
-    )
-
-    n_steps = args.steps if args.steps is not None else scenario.n_slots
+    strategy = STRATEGIES[args.strategy]() if args.strategy else None
     print("Starting GridWeave Campus Simulation...")
-    print(f"Scenario: {scenario.name} | Buildings: {len(agents)} | Steps: {n_steps} | Strategy: {args.strategy}")
-
     t0 = time.perf_counter()
-    result = coordinator.run(steps=n_steps)
+    out = run_simulation(args.scenario, args.mode, steps=args.steps, n_buildings=args.buildings,
+                         days=args.days, seed=args.seed, strategy=strategy)
     elapsed = time.perf_counter() - t0
-
-    metrics = MetricsAggregator.compute(result)
+    result = out.result
+    metrics = MetricsAggregator.compute(result, out.agents)
+    print(f"Scenario: {out.scenario.name} | Mode: {out.mode.label}"
+          f"{f' (strategy override: {args.strategy})' if args.strategy else ''} | "
+          f"Buildings: {len(out.agents)} | Slots: {len(result.slots)}")
 
     if not args.quiet:
         print("\n" + CliDashboard.render_summary(result, metrics))
         print("\n" + CliDashboard.render_time_series_ascii(result))
-        print(f"\nCompleted {len(result.slots)} slots in {elapsed:.2f}s ({len(result.slots)/elapsed:.1f} slots/sec)")
+        print(f"\nCompleted {len(result.slots)} slots in {elapsed:.2f}s ({len(result.slots) / elapsed:.1f} slots/sec)")
 
     if args.output:
         out_path = Path(args.output)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         data = result.to_dict()
         data["metrics"] = metrics.to_dict()
-        with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, default=str)
+        out_path.write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
         print(f"Saved simulation results to {out_path}")
 
     if args.web:
         print(f"\nLaunching web dashboard at http://localhost:{args.port} ... (Press Ctrl+C to stop)")
-        server = serve_dashboard(result, host="127.0.0.1", port=args.port)
+        server = serve_interactive_dashboard(out, host="127.0.0.1", port=args.port)
         try:
             server.serve_forever()
         except KeyboardInterrupt:
