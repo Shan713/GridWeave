@@ -68,7 +68,8 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8050, help="web dashboard port (default: 8050)")
     parser.add_argument("--output", help="path to write JSON simulation results and metrics")
     parser.add_argument("--quiet", action="store_true", help="suppress terminal dashboard output")
-    parser.add_argument("--log-level", default="WARNING", help="logging level (DEBUG, INFO, WARNING, ERROR)")
+    parser.add_argument("--log-level", default="ERROR",
+                        help="logging level (default ERROR; WARNING also prints every per-slot critical shortfall)")
     args = parser.parse_args()
     configure(args.log_level)
 
