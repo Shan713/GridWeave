@@ -169,6 +169,34 @@ class CampusMetrics:
     slot_clearing_price: list[float | None]
     slot_events: list[list[str]]
 
+    # Where unserved demand went (kWh). Together with total_served_kwh these
+    # partition total demand: served + critical shortfall + curtailed +
+    # expired + still queued == demand. "Deferred" is a flow, not an end state:
+    # deferred energy is later served (inside served), expires, or is still queued.
+    total_expired_kwh: float = 0.0
+    total_backlog_remaining_kwh: float = 0.0
+
+    # Storage (per slot; None where the run has no battery / no grid offer)
+    total_grid_to_battery_kwh: float = 0.0
+    slot_battery_soc: tuple[float | None, ...] = ()
+    slot_battery_discharge_kw: tuple[float, ...] = ()
+    slot_battery_offer_price: tuple[float | None, ...] = ()
+    slot_grid_price: tuple[float | None, ...] = ()
+
+    def series_dict(self) -> dict[str, Any]:
+        """Per-slot series for charts (kept out of to_dict to keep exports small)."""
+        return {
+            "timestamps": self.slot_timestamps,
+            "battery_soc": list(self.slot_battery_soc),
+            "battery_discharge_kw": [round(v, 3) for v in self.slot_battery_discharge_kw],
+            "battery_offer_price": list(self.slot_battery_offer_price),
+            "grid_price": list(self.slot_grid_price),
+        }
+
+    @property
+    def total_unserved_kwh(self) -> float:
+        return self.total_demand_kwh - self.total_served_kwh
+
     def summary_text(self) -> str:
         """Return a concise human-readable summary for CLI output."""
         lines = [
@@ -182,10 +210,14 @@ class CampusMetrics:
             f"    Total demand        : {self.total_demand_kwh:,.1f} kWh",
             f"    Total served        : {self.total_served_kwh:,.1f} kWh",
             f"    Service ratio       : {self.overall_service_ratio:.2%}",
-            f"    Critical shortfall  : {self.total_critical_shortfall_kwh:.1f} kWh "
-            f"({self.total_critical_shortfall_events} events)",
-            f"    Deferred            : {self.total_deferred_kwh:.1f} kWh",
-            f"    Curtailed           : {self.total_curtailed_kwh:.1f} kWh",
+            f"    Critical served     : {self.critical_service_ratio:.2%}",
+            f"    Unserved            : {self.total_unserved_kwh:,.1f} kWh =",
+            f"      critical shortfall {self.total_critical_shortfall_kwh:,.1f} "
+            f"({self.total_critical_shortfall_events} events)"
+            f" + curtailed {self.total_curtailed_kwh:,.1f}"
+            f" + expired {self.total_expired_kwh:,.1f}"
+            f" + still queued {self.total_backlog_remaining_kwh:,.1f}",
+            f"    Deferred (flow)     : {self.total_deferred_kwh:.1f} kWh",
             "",
             "  SUPPLY",
             f"    Grid                : {self.total_grid_kwh:,.1f} kWh",
@@ -231,6 +263,11 @@ class CampusMetrics:
             "total_curtailed_kwh": round(self.total_curtailed_kwh, 2),
             "total_critical_shortfall_kwh": round(self.total_critical_shortfall_kwh, 3),
             "total_critical_shortfall_events": self.total_critical_shortfall_events,
+            "total_expired_kwh": round(self.total_expired_kwh, 2),
+            "total_backlog_remaining_kwh": round(self.total_backlog_remaining_kwh, 2),
+            "total_unserved_kwh": round(self.total_unserved_kwh, 2),
+            "total_unused_allocation_kwh": round(self.total_unused_allocation_kwh, 2),
+            "total_grid_to_battery_kwh": round(self.total_grid_to_battery_kwh, 2),
             "overall_service_ratio": round(self.overall_service_ratio, 4),
             "critical_service_ratio": round(self.critical_service_ratio, 4),
             "flexible_service_ratio": round(self.flexible_service_ratio, 4),
@@ -319,6 +356,21 @@ class MetricsAggregator:
         prices       = [r.clearing_price     for r in slots]
         evts         = [r.events_triggered   for r in slots]
 
+        # --- storage series (read from offers/dispatch, so any SupplyProvider works) ---
+        batt_soc: list[float | None] = []
+        batt_disch: list[float] = []
+        batt_price: list[float | None] = []
+        grid_price: list[float | None] = []
+        for r in slots:
+            batteries = [o for o in r.offers if o.source_type.value == "battery"]
+            grids = [o for o in r.offers if o.source_type.value == "grid"]
+            socs = [float(o.constraints["soc"]) for o in batteries if "soc" in o.constraints]
+            batt_soc.append(round(sum(socs) / len(socs), 4) if socs else None)
+            batt_ids = {o.source_id for o in batteries}
+            batt_disch.append(sum(d.delivered_kw for d in r.dispatch_results if d.source_id in batt_ids))
+            batt_price.append(min(o.marginal_price for o in batteries) if batteries else None)
+            grid_price.append(min(o.marginal_price for o in grids) if grids else None)
+
         # --- campus totals ---
         total_demand   = sum(d * h for d in demand_kw)
         total_req      = sum(r.requested_kw * h for r in slots)
@@ -330,6 +382,8 @@ class MetricsAggregator:
         total_crit_sf  = sum(s.critical_shortfall_kwh for s in result.building_summaries.values())
         total_crit_events = sum(s.critical_shortfall_events for s in result.building_summaries.values())
         total_unused   = sum(s.unused_allocation_kwh for s in result.building_summaries.values())
+        total_expired  = sum(s.expired_kwh for s in result.building_summaries.values())
+        total_queued   = sum(s.final_backlog_kwh for s in result.building_summaries.values())
 
         peak_demand = max(demand_kw, default=0.0)
         avg_demand  = _safe_mean(demand_kw)
@@ -499,4 +553,11 @@ class MetricsAggregator:
             slot_service_ratio=svc_ratio,
             slot_clearing_price=prices,
             slot_events=evts,
+            total_expired_kwh=total_expired,
+            total_backlog_remaining_kwh=total_queued,
+            total_grid_to_battery_kwh=float(sm.get("grid_to_battery_kwh", 0.0)),
+            slot_battery_soc=tuple(batt_soc),
+            slot_battery_discharge_kw=tuple(batt_disch),
+            slot_battery_offer_price=tuple(batt_price),
+            slot_grid_price=tuple(grid_price),
         )

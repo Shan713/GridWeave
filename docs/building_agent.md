@@ -33,10 +33,12 @@ curtailed load.
 | Known? | **Known rules** | The market protocol and settlement rules are fixed and documented |
 
 **Agent type:** a **model-based agent with parameterised decision rules.** It keeps internal state
-(history, deferred-energy queue, deprivation). It uses a model (a statistical forecaster) to predict the
-slot it bids for. Its decisions come from explicit, deterministic formulas: classification, priority,
-willingness to pay, demand-response trimming and serving order. It does **not** optimise a utility
-function, and it does **not** learn in the machine-learning sense.
+(history, deferred-energy queue, deprivation). It predicts the slot it bids for with a model that is
+*learned* from its own history (the default `LinearARForecaster`, a ridge-regression seasonal
+autoregression; see [forecasting.md](forecasting.md)). Its decisions come from explicit,
+deterministic formulas: classification, priority, willingness to pay, demand-response trimming and
+serving order. It does **not** optimise a utility function. The only learning is the forecaster's
+regression fit; the deprivation state is a heuristic EWMA update.
 
 It is still more than a simple reflex agent. It anticipates demand instead of bidding its current
 reading. It carries deferred energy forward with deadlines. It escalates priority and price after

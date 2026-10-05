@@ -8,11 +8,12 @@
     "rebound_fraction": 0.2
   },
   "forecast": {
-    "method": "seasonal_ewma",
+    "method": "linear_ar",
     "params": {
       "season_length": 96,
-      "alpha": 0.3,
-      "beta": 0.8
+      "train_window": 672,
+      "ridge": 1.0,
+      "refit_every": 16
     },
     "fallback_method": "ewma",
     "fallback_params": {

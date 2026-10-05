@@ -1,0 +1,325 @@
+{
+  "modes": {
+    "grid_outage": {
+      "equal_share": {
+        "critical_shortfall_kwh": 112.5,
+        "critical_service_ratio": 0.9795,
+        "service_ratio": 0.9402,
+        "expired_kwh": 565.1,
+        "fairness": 0.9991,
+        "cost": 82640
+      },
+      "critical_first": {
+        "critical_shortfall_kwh": 31.7,
+        "critical_service_ratio": 0.9942,
+        "service_ratio": 0.9367,
+        "expired_kwh": 684.6,
+        "fairness": 0.997,
+        "cost": 82660
+      },
+      "gridweave": {
+        "critical_shortfall_kwh": 29.9,
+        "critical_service_ratio": 0.9945,
+        "service_ratio": 0.9391,
+        "expired_kwh": 659.6,
+        "fairness": 0.9974,
+        "cost": 82667
+      }
+    },
+    "mixed_stress": {
+      "equal_share": {
+        "critical_shortfall_kwh": 160.9,
+        "critical_service_ratio": 0.9804,
+        "service_ratio": 0.9502,
+        "expired_kwh": 684.9,
+        "fairness": 0.9994,
+        "cost": 127221
+      },
+      "critical_first": {
+        "critical_shortfall_kwh": 54.7,
+        "critical_service_ratio": 0.9933,
+        "service_ratio": 0.9483,
+        "expired_kwh": 824.5,
+        "fairness": 0.9984,
+        "cost": 127237
+      },
+      "gridweave": {
+        "critical_shortfall_kwh": 51.5,
+        "critical_service_ratio": 0.9937,
+        "service_ratio": 0.9496,
+        "expired_kwh": 806.0,
+        "fairness": 0.9986,
+        "cost": 127245
+      }
+    },
+    "scarcity": {
+      "equal_share": {
+        "critical_shortfall_kwh": 386.9,
+        "critical_service_ratio": 0.8587,
+        "service_ratio": 0.6213,
+        "expired_kwh": 1734.1,
+        "fairness": 0.9893,
+        "cost": 35544
+      },
+      "critical_first": {
+        "critical_shortfall_kwh": 53.7,
+        "critical_service_ratio": 0.9804,
+        "service_ratio": 0.6209,
+        "expired_kwh": 2077.5,
+        "fairness": 0.9243,
+        "cost": 35544
+      },
+      "gridweave": {
+        "critical_shortfall_kwh": 46.8,
+        "critical_service_ratio": 0.9829,
+        "service_ratio": 0.6212,
+        "expired_kwh": 2080.1,
+        "fairness": 0.9179,
+        "cost": 35544
+      }
+    }
+  },
+  "supply_sweep": {
+    "grid_kw": [
+      250,
+      200,
+      150,
+      100,
+      50
+    ],
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "critical_shortfall_kwh": {
+      "equal_share": [
+        1.2,
+        15.2,
+        80.6,
+        223.9,
+        624.9
+      ],
+      "critical_first": [
+        4.5,
+        9.1,
+        18.6,
+        73.2,
+        492.1
+      ],
+      "gridweave": [
+        2.6,
+        6.6,
+        16.3,
+        71.0,
+        483.5
+      ]
+    },
+    "service_ratio": {
+      "equal_share": [
+        0.9997,
+        0.9606,
+        0.8861,
+        0.7568,
+        0.5685
+      ],
+      "critical_first": [
+        0.9975,
+        0.953,
+        0.881,
+        0.7543,
+        0.5667
+      ],
+      "gridweave": [
+        0.9994,
+        0.9573,
+        0.8829,
+        0.7564,
+        0.5685
+      ]
+    }
+  },
+  "forecast_heldout": [
+    {
+      "method": "LinearAR (learned)",
+      "horizon": 1,
+      "series": 25,
+      "origins_per_series": 480,
+      "mae": 3.514,
+      "rmse": 5.627,
+      "mape": 7.299,
+      "bias": 0.237
+    },
+    {
+      "method": "EWMA(a=0.6)",
+      "horizon": 1,
+      "series": 25,
+      "origins_per_series": 480,
+      "mae": 4.743,
+      "rmse": 7.349,
+      "mape": 8.916,
+      "bias": -0.013
+    },
+    {
+      "method": "SeasonalEWMA(96)",
+      "horizon": 1,
+      "series": 25,
+      "origins_per_series": 480,
+      "mae": 5.039,
+      "rmse": 7.858,
+      "mape": 10.892,
+      "bias": 0.361
+    },
+    {
+      "method": "MA(4)",
+      "horizon": 1,
+      "series": 25,
+      "origins_per_series": 480,
+      "mae": 6.504,
+      "rmse": 10.109,
+      "mape": 12.449,
+      "bias": -0.021
+    },
+    {
+      "method": "EWMA(a=0.3)",
+      "horizon": 1,
+      "series": 25,
+      "origins_per_series": 480,
+      "mae": 7.337,
+      "rmse": 11.11,
+      "mape": 14.786,
+      "bias": -0.019
+    },
+    {
+      "method": "SeasonalNaive(96)",
+      "horizon": 1,
+      "series": 25,
+      "origins_per_series": 480,
+      "mae": 8.16,
+      "rmse": 15.772,
+      "mape": 19.41,
+      "bias": 1.771
+    },
+    {
+      "method": "MA(8)",
+      "horizon": 1,
+      "series": 25,
+      "origins_per_series": 480,
+      "mae": 9.792,
+      "rmse": 14.894,
+      "mape": 19.782,
+      "bias": -0.025
+    },
+    {
+      "method": "Oracle (noise-free template)",
+      "horizon": 1,
+      "series": 25,
+      "origins_per_series": 480,
+      "mae": 3.009,
+      "rmse": 4.655,
+      "mape": 5.149,
+      "bias": -0.64
+    },
+    {
+      "method": "LinearAR (learned)",
+      "horizon": 4,
+      "series": 25,
+      "origins_per_series": 477,
+      "mae": 5.521,
+      "rmse": 9.69,
+      "mape": 12.089,
+      "bias": 0.482
+    },
+    {
+      "method": "SeasonalEWMA(96)",
+      "horizon": 4,
+      "series": 25,
+      "origins_per_series": 477,
+      "mae": 5.889,
+      "rmse": 9.308,
+      "mape": 12.869,
+      "bias": 0.4
+    },
+    {
+      "method": "EWMA(a=0.6)",
+      "horizon": 4,
+      "series": 25,
+      "origins_per_series": 477,
+      "mae": 7.806,
+      "rmse": 12.643,
+      "mape": 15.186,
+      "bias": -0.078
+    },
+    {
+      "method": "SeasonalNaive(96)",
+      "horizon": 4,
+      "series": 25,
+      "origins_per_series": 477,
+      "mae": 8.185,
+      "rmse": 15.81,
+      "mape": 19.488,
+      "bias": 1.782
+    },
+    {
+      "method": "MA(4)",
+      "horizon": 4,
+      "series": 25,
+      "origins_per_series": 477,
+      "mae": 9.326,
+      "rmse": 14.819,
+      "mape": 18.457,
+      "bias": -0.093
+    },
+    {
+      "method": "EWMA(a=0.3)",
+      "horizon": 4,
+      "series": 25,
+      "origins_per_series": 477,
+      "mae": 10.136,
+      "rmse": 15.637,
+      "mape": 20.9,
+      "bias": -0.092
+    },
+    {
+      "method": "MA(8)",
+      "horizon": 4,
+      "series": 25,
+      "origins_per_series": 477,
+      "mae": 12.431,
+      "rmse": 18.847,
+      "mape": 25.849,
+      "bias": -0.104
+    },
+    {
+      "method": "Oracle (noise-free template)",
+      "horizon": 4,
+      "series": 25,
+      "origins_per_series": 477,
+      "mae": 3.007,
+      "rmse": 4.656,
+      "mape": 5.149,
+      "bias": -0.641
+    }
+  ],
+  "battery_normal": {
+    "discharge_kwh": 641.2,
+    "recharged_from_grid_kwh": 552.6,
+    "cost": 134694
+  },
+  "scaling": {
+    "buildings": [
+      5,
+      10,
+      25,
+      50,
+      100
+    ],
+    "ms_per_15min_slot": [
+      1.8,
+      3.3,
+      12.6,
+      25.2,
+      52.0
+    ]
+  }
+}

@@ -103,6 +103,7 @@ class BatteryStorageAgent:
         max_soc: float = 0.95,
         degradation_cost_per_kwh: float = 7.0,  # e.g., currency units per kWh throughput
         reserve_policy: BatteryReservePolicy | None = None,
+        initial_energy_cost_per_kwh: float = 0.0,
     ) -> None:
         self.source_id = require_non_empty("source_id", source_id)
         self.capacity_kwh = require_positive("capacity_kwh", capacity_kwh)
@@ -132,6 +133,28 @@ class BatteryStorageAgent:
         self.operating_mode: BatteryOperatingMode = BatteryOperatingMode.IDLE
         self._last_dispatched_slot: TimeSlot | None = None
         self._derated_max_discharge_kw: float | None = None
+        # Average cost of the energy held in the cells (currency per stored kWh).
+        self.initial_energy_cost_per_kwh = require_non_negative(
+            "initial_energy_cost_per_kwh", initial_energy_cost_per_kwh
+        )
+        self._energy_cost_basis = self.initial_energy_cost_per_kwh
+
+    @property
+    def energy_cost_per_kwh(self) -> float:
+        """Cost of the stored energy per kWh *delivered* (includes discharge losses)."""
+        if self.discharge_efficiency <= 0:
+            return 0.0
+        return self._energy_cost_basis / self.discharge_efficiency
+
+    @property
+    def offer_price_per_kwh(self) -> float:
+        """Marginal offer price: cell wear plus the cost of the energy being sold.
+
+        Pricing only the wear cost made the market use the battery whenever it was
+        cheaper than the grid (e.g. at 06:00), even when the stored energy was
+        bought at a price that made that a loss.
+        """
+        return round(self.degradation_cost_per_kwh + self.energy_cost_per_kwh, 4)
 
     @property
     def stored_energy_kwh(self) -> float:
@@ -198,6 +221,8 @@ class BatteryStorageAgent:
             "max_discharge_kw": self.max_discharge_kw,
             "max_charge_kw": self.max_charge_kw,
             "mode": self.operating_mode.value,
+            "degradation_cost_per_kwh": self.degradation_cost_per_kwh,
+            "energy_cost_per_kwh": round(self.energy_cost_per_kwh, 4),
             "decision_trace": decision_trace,
         }
 
@@ -206,7 +231,7 @@ class BatteryStorageAgent:
             source_type=SourceType.BATTERY,
             time_slot=slot,
             available_kw=available_kw,
-            marginal_price=self.degradation_cost_per_kwh,
+            marginal_price=self.offer_price_per_kwh,
             constraints=constraints,
         )
 
@@ -268,13 +293,17 @@ class BatteryStorageAgent:
             },
         )
 
-    def charge(self, power_kw: float, slot: TimeSlot) -> float:
+    def charge(self, power_kw: float, slot: TimeSlot, source_price_per_kwh: float = 0.0) -> float:
         """Directly charge the battery (e.g. from surplus solar or off-peak grid).
 
         Enforces charging physics:
           accepted_power_kw = min(power_kw, available_charge_kw)
           chem_stored_kwh = (accepted_power_kw * slot.hours) * charge_efficiency
           soc_new = soc_old + (chem_stored_kwh / capacity_kwh)
+
+        ``source_price_per_kwh`` is what the charging energy cost (0 for surplus
+        solar, the tariff for grid energy). It updates the weighted-average cost
+        of the dispatchable stored energy, which feeds the offer price.
 
         Returns
         -------
@@ -288,8 +317,16 @@ class BatteryStorageAgent:
         max_accept_kw = self.available_charge_kw(slot)
         accepted_kw = min(power_kw, max_accept_kw)
 
+        require_non_negative("source_price_per_kwh", source_price_per_kwh)
         ac_energy_kwh = accepted_kw * slot.hours
         chem_stored_kwh = ac_energy_kwh * self.charge_efficiency
+
+        # Weighted-average cost of dispatchable energy (above the physical minimum)
+        held_kwh = max(0.0, (self.soc - self.min_soc) * self.capacity_kwh)
+        if held_kwh + chem_stored_kwh > 0:
+            self._energy_cost_basis = (
+                held_kwh * self._energy_cost_basis + ac_energy_kwh * source_price_per_kwh
+            ) / (held_kwh + chem_stored_kwh)
 
         # State of Charge update
         delta_soc = chem_stored_kwh / self.capacity_kwh
@@ -341,6 +378,7 @@ class BatteryStorageAgent:
         object.__setattr__(self.reserve_policy, "emergency_released", False)
         self._last_dispatched_slot = None
         self._derated_max_discharge_kw = None
+        self._energy_cost_basis = self.initial_energy_cost_per_kwh
 
     def snapshot(self) -> dict[str, Any]:
         """Telemetry snapshot for P4 coordinator and dashboard."""
@@ -357,4 +395,6 @@ class BatteryStorageAgent:
             "emergency_released": self.reserve_policy.emergency_released,
             "derated_max_discharge_kw": self._derated_max_discharge_kw,
             "dispatch_count": self.state.dispatch_count,
+            "energy_cost_per_kwh": round(self.energy_cost_per_kwh, 4),
+            "offer_price_per_kwh": self.offer_price_per_kwh,
         }

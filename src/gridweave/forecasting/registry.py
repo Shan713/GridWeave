@@ -5,6 +5,7 @@ from typing import Any, Callable
 
 from gridweave.forecasting.base_forecaster import BaseForecaster
 from gridweave.forecasting.ewma import EWMAForecaster
+from gridweave.forecasting.linear_ar import LinearARForecaster
 from gridweave.forecasting.moving_average import MovingAverageForecaster
 from gridweave.forecasting.seasonal import SeasonalEWMAForecaster, SeasonalNaiveForecaster
 from gridweave.utils.validation import ValidationError
@@ -14,6 +15,7 @@ FORECASTERS: dict[str, Callable[..., BaseForecaster]] = {
     EWMAForecaster.name: EWMAForecaster,
     SeasonalNaiveForecaster.name: SeasonalNaiveForecaster,
     SeasonalEWMAForecaster.name: SeasonalEWMAForecaster,
+    LinearARForecaster.name: LinearARForecaster,
 }
 
 

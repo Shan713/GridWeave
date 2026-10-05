@@ -6,12 +6,15 @@ web dashboard and the native Python dashboard.
 """
 from __future__ import annotations
 
+import pytest
+
 from gridweave.auction import AuctionEngine, GreedyAllocationStrategy
 from gridweave.config.settings import synthetic_campus
 from gridweave.coordinator import (
     Coordinator,
     MetricsAggregator,
     SimulationResult,
+    get_scenario,
 )
 from gridweave.factory import build_agents, build_simulators
 from gridweave.supply.provider import CampusSupplyProvider
@@ -34,6 +37,16 @@ def _run_sim(n: int = 3, steps: int = 8) -> tuple[SimulationResult, dict]:
     coord = Coordinator(agents, envs, auc, supply)
     result = coord.run(steps=steps)
     return result, agents
+
+
+def _run_scarce(steps: int = 96) -> tuple[SimulationResult, dict]:
+    """A supply-constrained run (the built-in 'scarcity' scenario) so shortfalls are non-zero."""
+    scenario = get_scenario("scarcity")
+    cfg = synthetic_campus(5, seed=scenario.seed)
+    agents = build_agents(cfg)
+    coord = Coordinator(agents, build_simulators(cfg), AuctionEngine(strategy=GreedyAllocationStrategy()),
+                        CampusSupplyProvider.from_config(scenario.supply_config), scenario=scenario)
+    return coord.run(steps=steps), agents
 
 
 class TestDashboardDataLayer:
@@ -178,6 +191,71 @@ class TestDashboardDataLayer:
         assert web_metrics.overall_service_ratio == python_metrics.overall_service_ratio
         assert web_metrics.total_demand_kwh == python_metrics.total_demand_kwh
         assert web_metrics.fairness.jains_index == python_metrics.fairness.jains_index
+
+    def test_unserved_breakdown_partitions_demand(self):
+        """Dashboards show where unserved energy went; the parts must add up to demand."""
+        result, agents = _run_scarce()
+        m = MetricsAggregator.compute(result, agents)
+        parts = (m.total_served_kwh + m.total_critical_shortfall_kwh + m.total_curtailed_kwh
+                 + m.total_expired_kwh + m.total_backlog_remaining_kwh)
+        assert parts == pytest.approx(m.total_demand_kwh, abs=0.01)
+        assert m.total_unserved_kwh == pytest.approx(m.total_demand_kwh - m.total_served_kwh)
+        # the scenario really is scarce, so the breakdown is non-trivial
+        assert m.total_critical_shortfall_kwh > 0 and m.total_expired_kwh > 0
+        assert 0.0 <= m.critical_service_ratio < 1.0
+
+    def test_building_bar_segments_sum_to_demand(self):
+        """The per-building stacked bar uses end states only, so it sums to demand."""
+        result, _ = _run_scarce()
+        for bs in result.building_summaries.values():
+            d = bs.to_dict()
+            stacked = (d["served_kwh"] + d["critical_shortfall_kwh"] + d["curtailed_kwh"]
+                       + d["expired_kwh"] + d["final_backlog_kwh"])
+            assert stacked == pytest.approx(d["demand_kwh"], abs=0.05), bs.building_id
+
+    def test_web_api_serves_critical_and_expired_fields(self):
+        """The web page reads these keys from /api/metrics; they must be served."""
+        import json
+        import threading
+        import urllib.request
+
+        from gridweave.coordinator.web_dashboard import serve_dashboard
+
+        result, _ = _run_scarce(steps=24)
+        server = serve_dashboard(result, port=0)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            url = f"http://127.0.0.1:{server.server_address[1]}"
+            data = json.load(urllib.request.urlopen(f"{url}/api/metrics", timeout=5))
+            page = urllib.request.urlopen(url, timeout=5).read().decode()
+        finally:
+            server.shutdown()
+        for key in ("critical_service_ratio", "total_critical_shortfall_kwh", "total_critical_shortfall_events",
+                    "total_expired_kwh", "total_backlog_remaining_kwh", "total_unserved_kwh"):
+            assert key in data, key
+        for key in ("expired_kwh", "critical_shortfall_kwh", "final_backlog_kwh"):
+            assert key in next(iter(data["building_summaries"].values())), key
+        assert "Critical Load Served" in page and "kpi-crit-ratio" in page
+        assert "batteryChart" in page and "priceChart" in page
+        assert {"battery_soc", "battery_discharge_kw", "battery_offer_price", "grid_price"} <= set(data["series"])
+
+    def test_battery_series_for_dashboard(self):
+        """Battery SOC, discharge and prices are available per slot and consistent with the run."""
+        result, agents = _run_scarce(steps=48)
+        m = MetricsAggregator.compute(result, agents)
+        s = m.series_dict()
+        n = result.n_slots
+        assert len(s["battery_soc"]) == len(s["battery_discharge_kw"]) == len(s["grid_price"]) == n
+        assert all(v is None or 0.0 <= v <= 1.0 for v in s["battery_soc"])
+        assert sum(s["battery_discharge_kw"]) * 0.25 == pytest.approx(m.total_battery_discharge_kwh, abs=0.1)
+        assert all(p is not None and p > 0 for p in s["battery_offer_price"])
+
+    def test_cli_report_shows_critical_and_expired(self):
+        from gridweave.coordinator.cli_dashboard import CliDashboard
+
+        result, agents = _run_scarce(steps=24)
+        text = CliDashboard.render_summary(result, MetricsAggregator.compute(result, agents))
+        assert "Critical served" in text and "Crit. short" in text and "Expired" in text
 
     def test_web_dashboard_make_handler(self):
         """Verify web dashboard handler initializes without attribute errors."""

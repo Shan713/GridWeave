@@ -30,6 +30,9 @@ class SlotEnergyRecord:
     grid_cost: float
     battery_degradation_cost: float
     total_supply_cost: float
+    # Grid energy imported to charge storage (not delivered to campus) and its cost.
+    grid_to_battery_kwh: float = 0.0
+    grid_charging_cost: float = 0.0
 
     def verify_conservation(self, tolerance_kwh: float = 0.005) -> None:
         """Verify first-law energy conservation for this slot."""
@@ -47,7 +50,15 @@ class SlotEnergyRecord:
                 f"but sum of source dispatches is {sum_deliveries:.4f} kWh (diff={diff:.4f} kWh)"
             )
 
-        # 2. Solar balance: generated = delivered + curtailed + to_battery
+        # 2. Storage inflow: battery charge = solar-to-battery + grid-to-battery
+        storage_diff = abs(self.battery_charged_kwh - self.solar_to_battery_kwh - self.grid_to_battery_kwh)
+        if storage_diff > tolerance_kwh:
+            raise ConservationViolation(
+                f"Storage balance violation in slot {self.slot}: charged {self.battery_charged_kwh:.4f} kWh != "
+                f"solar {self.solar_to_battery_kwh:.4f} + grid {self.grid_to_battery_kwh:.4f} kWh"
+            )
+
+        # 3. Solar balance: generated = delivered + curtailed + to_battery
         solar_accounted = self.solar_delivered_kwh + self.solar_curtailed_kwh + self.solar_to_battery_kwh
         solar_diff = abs(self.solar_generated_kwh - solar_accounted)
         if solar_diff > tolerance_kwh:
@@ -71,6 +82,8 @@ class SupplyAccountant:
         self.cumulative_battery_chg_kwh: float = 0.0
         self.cumulative_battery_losses_kwh: float = 0.0
         self.cumulative_delivered_kwh: float = 0.0
+        self.cumulative_grid_to_batt_kwh: float = 0.0
+        self.cumulative_grid_charging_cost: float = 0.0
         self.cumulative_grid_cost: float = 0.0
         self.cumulative_battery_deg_cost: float = 0.0
         self.cumulative_total_cost: float = 0.0
@@ -85,8 +98,13 @@ class SupplyAccountant:
         grid_tariff: float = 10.0,
         battery_deg_rate: float = 7.0,
         source_types: Mapping[str, SourceType] | None = None,
+        grid_to_battery_kw: float = 0.0,
     ) -> SlotEnergyRecord:
-        """Process and verify physical dispatch results for one market slot."""
+        """Process and verify physical dispatch results for one market slot.
+
+        ``battery_charged_kw`` is the total AC charging power; ``grid_to_battery_kw``
+        is the part of it imported from the grid (the rest came from surplus solar).
+        """
         dt_hours = slot.hours
 
         grid_kw = 0.0
@@ -108,11 +126,13 @@ class SupplyAccountant:
         solar_gen_kwh = solar_generated_kw * dt_hours
         battery_disch_kwh = battery_kw * dt_hours
         battery_chg_kwh = battery_charged_kw * dt_hours
+        grid_to_batt_kwh = grid_to_battery_kw * dt_hours
         solar_to_batt_kwh = (
-            min(solar_gen_kwh - solar_del_kwh, battery_chg_kwh)
+            min(solar_gen_kwh - solar_del_kwh, battery_chg_kwh - grid_to_batt_kwh)
             if solar_gen_kwh > solar_del_kwh
             else 0.0
         )
+        solar_to_batt_kwh = max(0.0, solar_to_batt_kwh)
         solar_curt_kwh = max(0.0, solar_gen_kwh - solar_del_kwh - solar_to_batt_kwh)
 
         total_del_kwh = grid_kwh + solar_del_kwh + battery_disch_kwh
@@ -129,7 +149,8 @@ class SupplyAccountant:
             if source_types.get(r.source_id) == SourceType.BATTERY
             or (r.source_id not in source_types and "battery" in r.source_id.lower())
         )
-        total_cost = grid_cost + deg_cost
+        charging_cost = grid_to_batt_kwh * grid_tariff
+        total_cost = grid_cost + deg_cost + charging_cost
 
         record = SlotEnergyRecord(
             slot=slot,
@@ -145,6 +166,8 @@ class SupplyAccountant:
             grid_cost=round(grid_cost, 4),
             battery_degradation_cost=round(deg_cost, 4),
             total_supply_cost=round(total_cost, 4),
+            grid_to_battery_kwh=round(grid_to_batt_kwh, 4),
+            grid_charging_cost=round(charging_cost, 4),
         )
 
         record.verify_conservation()
@@ -160,6 +183,8 @@ class SupplyAccountant:
         self.cumulative_battery_chg_kwh += battery_chg_kwh
         self.cumulative_battery_losses_kwh += battery_efficiency_losses_kwh
         self.cumulative_delivered_kwh += total_del_kwh
+        self.cumulative_grid_to_batt_kwh += grid_to_batt_kwh
+        self.cumulative_grid_charging_cost += charging_cost
         self.cumulative_grid_cost += grid_cost
         self.cumulative_battery_deg_cost += deg_cost
         self.cumulative_total_cost += total_cost
@@ -177,6 +202,8 @@ class SupplyAccountant:
         self.cumulative_battery_chg_kwh = 0.0
         self.cumulative_battery_losses_kwh = 0.0
         self.cumulative_delivered_kwh = 0.0
+        self.cumulative_grid_to_batt_kwh = 0.0
+        self.cumulative_grid_charging_cost = 0.0
         self.cumulative_grid_cost = 0.0
         self.cumulative_battery_deg_cost = 0.0
         self.cumulative_total_cost = 0.0
@@ -208,6 +235,8 @@ class SupplyAccountant:
             "cumulative_solar_curt_kwh": round(self.cumulative_solar_curt_kwh, 4),
             "cumulative_battery_disch_kwh": round(self.cumulative_battery_disch_kwh, 4),
             "cumulative_battery_chg_kwh": round(self.cumulative_battery_chg_kwh, 4),
+            "cumulative_grid_to_batt_kwh": round(self.cumulative_grid_to_batt_kwh, 4),
+            "cumulative_grid_charging_cost": round(self.cumulative_grid_charging_cost, 4),
             "solar_utilization_ratio": round(solar_util, 4),
             "renewable_penetration_ratio": round(renew_fraction, 4),
             "cumulative_grid_cost": round(self.cumulative_grid_cost, 4),

@@ -13,6 +13,7 @@ from __future__ import annotations
 from gridweave.coordinator.cli_dashboard import CliDashboard
 from gridweave.coordinator.coordinator import Coordinator, CoordinatorError, SettlementError
 from gridweave.coordinator.metrics import CampusMetrics, FairnessMetrics, MarketMetrics, MetricsAggregator
+from gridweave.coordinator.modes import DEFAULT_MODE, MODES, Mode, RunOutput, get_mode, run_simulation
 from gridweave.coordinator.records import BuildingSummary, EventRecord, SimulationResult, SlotRecord
 from gridweave.coordinator.scenarios import (
     BATTERY_DERATE,
@@ -53,6 +54,13 @@ __all__ = [
     "TARIFF_SPIKE",
     "SCARCITY",
     "MIXED_STRESS",
+    # Modes (before -> after comparison)
+    "Mode",
+    "MODES",
+    "DEFAULT_MODE",
+    "get_mode",
+    "run_simulation",
+    "RunOutput",
     # Metrics
     "MetricsAggregator",
     "CampusMetrics",

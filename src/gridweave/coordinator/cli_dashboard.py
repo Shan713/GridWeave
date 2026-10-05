@@ -40,8 +40,16 @@ class CliDashboard:
             f"|  Served:     {metrics.total_served_kwh:8.2f} kWh ({metrics.overall_service_ratio:6.1%})  |"
         )
         lines.append(
-            f"|  Deferred:     {metrics.total_deferred_kwh:8.2f} kWh  "
+            f"|  Critical served: {metrics.critical_service_ratio:6.1%}      "
+            f"|  Crit. short: {metrics.total_critical_shortfall_kwh:8.2f} kWh ({metrics.total_critical_shortfall_events:4d} ev) |"
+        )
+        lines.append(
+            f"|  Expired:      {metrics.total_expired_kwh:8.2f} kWh  "
             f"|  Curtailed:  {metrics.total_curtailed_kwh:8.2f} kWh ({curtailment_rate:6.1%})  |"
+        )
+        lines.append(
+            f"|  Deferred*:    {metrics.total_deferred_kwh:8.2f} kWh  "
+            f"|  Still queued:{metrics.total_backlog_remaining_kwh:8.2f} kWh             |"
         )
         lines.append(
             f"|  Jain Fairness:  {metrics.fairness.jains_index_final:6.4f}      "
@@ -61,16 +69,18 @@ class CliDashboard:
         lines.append("| PER-BUILDING SUMMARY                                                          |")
         lines.append(f"| Total Buildings: {len(result.building_summaries):<60} |")
         lines.append(div)
-        lines.append("| Building ID     Demand(kWh) Served (kWh)  Def (kWh)  Curt (kWh)  Svc Ratio      |")
+        lines.append(
+            f"| {'Building ID':<16}{'Demand':>8}{'Served':>8}{'CritShrt':>9}{'Curtail':>8}"
+            f"{'Expired':>8}{'Deferred*':>10}{'Svc':>9} |"
+        )
         lines.append(div)
         for b_id, bs in sorted(result.building_summaries.items()):
             lines.append(
-                f"| {b_id:<15} {bs.demand_kwh:9.1f}   "
-                f"{bs.served_kwh:11.1f}  "
-                f"{bs.deferred_kwh:8.1f}  "
-                f"{bs.curtailed_kwh:8.1f}  "
-                f"{bs.service_ratio:8.1%}      |"
+                f"| {b_id[:16]:<16}{bs.demand_kwh:8.1f}{bs.served_kwh:8.1f}{bs.critical_shortfall_kwh:9.1f}"
+                f"{bs.curtailed_kwh:8.1f}{bs.expired_kwh:8.1f}{bs.deferred_kwh:10.1f}{bs.service_ratio:9.1%} |"
             )
+        lines.append(div)
+        lines.append(f"| {'* Deferred is a flow: later served, expired, or still queued (kWh).':<76} |")
 
         # Event Log
         if result.event_log:

@@ -4,7 +4,7 @@ Three runs of the same campus day on the same multi-source mock supply
 (grid + solar + battery), differing only in how the Building Agents
 forecast and whether they respond to scarcity:
 
-  A. good forecast       Seasonal EWMA (the default)
+  A. good forecast       the default learned model (LinearAR)
   B. poor forecast       a naive model that always predicts yesterday's daily mean
   C. no demand response  good forecast, but scarcity_response = 0 (price-only revisions)
 
@@ -39,7 +39,7 @@ class FlatDailyMean(BaseForecaster):
 
 def run(label, forecaster=None, scarcity_response=None):
     cfg = load_campus_config()
-    cfg = replace(cfg, simulation=replace(cfg.simulation, days=2))   # day 1 = history, day 2 = evaluated
+    cfg = replace(cfg, simulation=replace(cfg.simulation, days=3))   # days 1-2 = history, day 3 = evaluated
     if scarcity_response is not None:
         cfg = replace(cfg, buildings=tuple(replace(b, spec=b.spec.with_overrides(scarcity_response=scarcity_response))
                                            for b in cfg.buildings))
@@ -49,8 +49,8 @@ def run(label, forecaster=None, scarcity_response=None):
             a.forecaster = forecaster
     supply = MockSupply.from_config(cfg.supply)
     coord = MockCoordinator(agents, envs, MockAuctioneer(), supply)
-    for building_id, env in envs.items():                            # day 1: observe only (no market)
-        for _ in range(96):
+    for building_id, env in envs.items():                            # days 1-2: observe only (no market)
+        for _ in range(2 * 96):
             agents[building_id].observe(env.step())
     coord.run()
     s = summarise(coord.records, agents)
@@ -62,7 +62,7 @@ def run(label, forecaster=None, scarcity_response=None):
     return s
 
 
-print("Tuesday 2026-01-06, 5 buildings, 96 closed-loop 15-min cycles, mock supply grid+solar+battery\n")
+print("Wednesday 2026-01-07, 5 buildings, 96 closed-loop 15-min cycles, mock supply grid+solar+battery\n")
 print(f"{'scenario':<24}{'fc MAE':>8}{'demand':>10}{'served':>9}{'deferred':>9}{'curtail':>9}{'expired':>8}"
       f"{'unused':>8}{'crit#':>7}{'critkWh':>8}{'SOC':>7}")
 print(f"{'':<24}{'kW':>8}{'kWh':>10}{'kWh':>9}{'kWh':>9}{'kWh':>9}{'kWh':>8}{'kWh':>8}")

@@ -2,99 +2,85 @@
 
 **Multi-agent auction-based campus energy management and demand response simulation system.**
 
-A campus of hostels, labs, academic blocks and libraries shares limited electricity from several
-sources (grid, solar, battery). Each building is an autonomous agent. It forecasts its own demand,
-separates critical from flexible load, and bids into a campus energy market. After each 15-minute
-slot, the agent settles the market's allocation against the demand that actually occurred, defers or
-curtails what could not be served, and carries the consequences into the next slot.
+A campus of hostels, labs, classrooms, a library and offices shares limited electricity from a grid
+connection, rooftop solar and a battery. Each building is an autonomous agent: it forecasts its own
+demand with a learned model, separates critical load (labs, safety systems) from flexible load (air
+conditioning, water heating), and bids into a campus energy market. The market protects critical load
+and dispatches the cheapest sources first. When supply is short, buildings re-bid and give up flexible
+load. After each 15-minute slot, every building settles against the demand that *actually* happened,
+and postponed energy is served later or expires.
 
-This repository contains the sealed **Workstream 1: Building Intelligence & Demand Management**,
-the production **Workstream 2 auction**, and an independently testable **Workstream 3 energy
-supply subsystem**. Workstream 4 remains the coordinator and dashboard boundary.
-
-**P1 status: SEALED** at contract version 2.0 (bid schema 1.1). See [docs/P1_FREEZE.md](docs/P1_FREEZE.md)
-for the frozen contract, the ownership boundaries and the change policy.
+**Start here: [docs/DESIGN.md](docs/DESIGN.md).** It is the single design document: PEAS,
+algorithms, validation, scenario catalogue, testing table, known limitations, viva one-liners and a
+5-minute demo script.
 
 | Workstream | Owner | Scope | Status |
 |---|---|---|---|
-| 1 | P1 | Building agents, demand simulation, forecasting, load classification, priority, bid generation, settlement, local response | **Implemented (this repo)** |
-| 2 | P2 | Auction / market mechanism, bid ranking, pricing, allocation, critical-load constraint policy | **Implemented** |
-| 3 | P3 | Grid, solar and battery agents, supply offers, dispatch, state of charge, forecasting, accounting | **Implemented** |
-| 4 | P4 | Environment loop, events, re-auction policy, dashboard, global metrics | Protocol + reference loop provided |
+| 1 | P1 Shantharam | Building agents, demand, forecasting, bids, settlement, shared contracts | Implemented, contract sealed ([P1_FREEZE](docs/P1_FREEZE.md)) |
+| 2 | P2 Gauri | Auction: bid scoring, four allocation strategies, fairness | Implemented |
+| 3 | P3 Akshitha | Grid, solar and battery agents, dispatch, events, energy accounting | Implemented |
+| 4 | P4 (akolla646) | Coordinator, scenarios, operating modes, metrics, dashboards | Implemented |
 
-## 1. Architecture
+## Results at a glance
 
-```
-Observation ─► BuildingAgent (P1) ── Bid ──► Auction (P2) ◄── SupplyOffers ── Supply (P3)
-      ▲             ▲                           │                    ▲
-      │             └──── Allocation ◄──────────┤── DispatchRequests ┘ (DispatchResults, SOC)
-      │                                         │
-  Environment ◄── Settlement ◄── agent.settle(allocation, realised demand)     orchestrated by P4
-```
+Same campus, same demand, same events; only the decision-making changes:
 
-* `gridweave.models`: immutable, self-validating data contracts shared by all workstreams.
-* `gridweave.interfaces`: `Protocol`s `DemandAgent`, `Auctioneer`, `SupplyProvider`,
-  `EnvironmentStream` (contract version 2.0). `gridweave.contracts` checks cross-party consistency.
-* The core is **pure standard-library Python**: deterministic, seeded, with no LLM and no machine
-  learning.
+| Critical load not served (kWh) | equal share (baseline) | critical first | **GridWeave (full)** |
+|---|---:|---:|---:|
+| Daytime grid outage | 112.5 | 31.7 | **29.9** |
+| Cloud + outage + price spike | 160.9 | 54.7 | **51.5** |
+| Supply ≈ half of demand | 386.9 | 53.7 | **46.8** |
 
-Details: [docs/architecture.md](docs/architecture.md). The design lessons taken from RescueSync are in
-[docs/design_notes_rescuesync.md](docs/design_notes_rescuesync.md).
+- **Forecasting:** the learned forecaster (ridge-regression seasonal autoregression) cuts next-slot
+  error by about 26% compared with the best statistical baseline, on held-out data (MAE 3.51 vs 4.74 kW).
+- **Battery:** it recharges off-peak and prices its energy by what it cost, so the market saves it for
+  the evening peak or an outage.
+- All results are on **synthetic** demand. See [DESIGN.md §13](docs/DESIGN.md#13-known-limitations-state-these-before-anyone-asks).
 
-## 2. The Person 1 subsystem
+<p>
+<img src="docs/figures/modes_critical_shortfall.png" width="49%" alt="critical shortfall by mode">
+<img src="docs/figures/supply_sweep.png" width="49%" alt="critical shortfall as supply shrinks">
+</p>
 
-```
-history → forecast → critical/flexible split → priority → bid → [revised bid under scarcity]
-      → market (P2) → allocation → realised demand → settlement (serve / defer / curtail) → next state
-```
+## Setup
 
-| Package | Responsibility |
-|---|---|
-| `models/` | `BuildingSpec`, `Observation`, `DemandState`, `BidContext`, `Bid`, `Allocation`, `Settlement`, `DeferredEnergy`, `SupplyOffer`, `DispatchRequest`, `DispatchResult`, `ClearingResult`, `TimeSlot` |
-| `simulation/` | Building-type `DemandProfile`s, seeded synthetic `DemandGenerator`, `BuildingSimulator` (with feedback hook), CSV I/O |
-| `forecasting/` | `BaseForecaster`: moving average, EWMA, seasonal naive, seasonal EWMA, fallback (statistical baselines); MAE/RMSE/MAPE; rolling backtest |
-| `classification/` | `LoadClassifier`: critical, flexible and minimum load |
-| `bidding/` | `PriorityModel` (explainable score in [0, 1]), `BidGenerator` + `PricingPolicy` |
-| `agents/` | `BuildingAgent`: lifecycle, settlement against realised demand, deferred-energy queue, deprivation state |
-| `config/`, `factory.py` | Typed JSON campus config (packaged default), `synthetic_campus(n)`, config → agents/simulators |
-| `mocks/` | `MockAuctioneer`, `MockGrid`/`MockSolar`/`MockBattery`/`MockSupply`, `MockCoordinator`: **test doubles**, not P2/P3/P4's systems |
-
-## 3. Setup
-
-Requires Python ≥ 3.10. There are no runtime dependencies.
+Python 3.10 or newer. The core has no runtime dependencies. matplotlib is optional (figures only).
 
 ```bash
 git clone https://github.com/Shan713/GridWeave.git
 cd GridWeave
 python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -e ".[dev,viz]"
 pytest
 ```
 
-`requirements.txt` installs the package in editable mode with the `[dev]` extras (pytest, pytest-cov,
-ruff). A plain `pip install .` also works; the default campus config ships as package data. On
-Windows, activate with `.venv\Scripts\activate`. Optional environment variables are listed in
-`.env.example`: `GRIDWEAVE_CONFIG`, `GRIDWEAVE_SEED` and `GRIDWEAVE_LOG_LEVEL`.
-
-## 4. Running
+## Running
 
 ```bash
-python examples/basic_building.py            # one agent: bid, allocation, realised demand, settlement
-python examples/mock_market_cycle.py         # one slot: offers -> bids -> revised bids -> clearing -> dispatch -> settlement
-python examples/closed_loop_demo.py          # good vs poor forecast, with/without demand response
-python examples/generate_profiles.py         # demand shape of every building type
-python examples/generate_bid.py              # config-driven campus -> bids (the P2 wire format)
-python scripts/run_building_simulation.py    # 5 buildings x 3 days, closed loop, mock grid+solar+battery
-python scripts/run_forecast_experiment.py    # forecasting comparison on development and held-out seeds
-python scripts/benchmark_scaling.py          # runtime and memory vs number of buildings
-python scripts/generate_sample_data.py       # regenerate data/sample/
-python examples/p3_supply_demo.py            # standalone Grid/Solar/Battery dispatch demo
-python scripts/run_p3_experiments.py         # solar forecasting and supply strategy benchmarks
-python scripts/benchmark_p3_scaling.py       # P3 fleet/scaling benchmark
+# Interactive dashboard: pick scenario and mode, compare modes, replay slot by slot
+python scripts/run_campus_simulation.py --scenario grid_outage --web          # open http://localhost:8050
+
+# Terminal
+python scripts/run_campus_simulation.py --scenario grid_outage --compare      # three modes, side by side
+python scripts/run_campus_simulation.py --scenario mixed_stress --mode equal_share
+python scripts/run_campus_simulation.py --buildings 20 --days 2 --output results.json
+
+# Evidence
+python scripts/make_figures.py                 # regenerate docs/figures/*.png (+ results.json)
+python scripts/run_forecast_experiment.py      # forecasting tables (development and held-out seeds)
+python scripts/run_p2_experiments.py           # auction strategies
+python scripts/run_p3_experiments.py           # supply and battery strategies
 ```
 
-A minimal agent in code:
+Scenarios: `normal`, `solar_drop`, `battery_outage`, `battery_derate`, `tariff_spike`,
+`grid_outage`, `scarcity`, `mixed_stress` (catalogue: [DESIGN.md §10](docs/DESIGN.md#10-scenario-catalogue-mode-gridweave)).
+Modes: `equal_share`, `critical_first`, `gridweave` (default).
+
+Per-workstream demos: `examples/closed_loop_demo.py` (P1), `examples/p2_auction_demo.py`,
+`examples/p3_supply_demo.py` and `examples/p4_coordinator_demo.py`.
+
+A single building agent in code:
 
 ```python
 from datetime import datetime, timedelta
@@ -114,118 +100,36 @@ settlement = agent.settle(allocation, realised)   # judged against realised dema
 print(settlement.status.value, settlement.forecast_error_kw, settlement.deferred_kw, agent.backlog_kw)
 ```
 
-## 5. Data model
-
-| Model | Key invariants (enforced on construction) |
-|---|---|
-| `BuildingSpec` | capacity > 0; `minimum_operational_kw ≤ capacity`; fractions and importance ∈ [0, 1]; `forecast_horizon ≥ 1`; `max_deferral_slots ≥ 1` |
-| `TimeSlot`, `Observation` (in the agent) | start on the 15-min grid; observations contiguous (no missing slots) |
-| `Bid` | `critical ≤ minimum ≤ requested`; `critical + flexible = requested`; priority, flexibility ∈ [0, 1]; `wtp ≤ max_price`; `requested ≤ capacity_kw` when `capacity_kw` is set (always, for agent bids) |
-| `Settlement` | `served = min(allocated, realised need)`; `critical served + shortfall = realised critical`; `new flexible served + deferred + curtailed = realised new flexible` |
-| `ClearingResult` + `validate_clearing` | one allocation per bid; allocation ≤ request; Σ allocated ≤ Σ offered; dispatch within offers; Σ dispatched = Σ allocated |
-| `DispatchResult` | `delivered ≤ requested` |
-
-## 6. Building Agent lifecycle
-
-`observe → generate_bid (update_state, forecast, classify, priority) → [revised generate_bid] →
-settle(allocation, realised) → snapshot`, with `abort_bid` for market failures. PEAS (mapped to
-code), environment properties, the priority, price and demand-response formulas, settlement rules,
-and who is responsible for critical load are in [docs/building_agent.md](docs/building_agent.md).
-The demand and load model is in [docs/demand_model.md](docs/demand_model.md).
-
-**Critical load.** P1 identifies critical demand, requests it separately, and detects and reports
-critical shortfalls against realised demand. P1 does **not** guarantee critical service: that
-depends on P2's clearing rules, P3's supply and P4's system response. The default 3-day mock run
-reports 4 small critical-shortfall events (0.91 kWh), all caused by under-forecasting.
-
-## 7. Forecasting
-
-Statistical time-series baselines behind one interface, evaluated by rolling-origin backtest on
-held-out seeds (101–105) of the synthetic data. Model selection used seeds 42–44.
-
-| Method | MAE h=1 (15 min) | MAE h=4 (1 h) | RMSE h=4 |
-|---|---:|---:|---:|
-| EWMA (α=0.6) | **4.74** | 7.81 | 12.64 |
-| Seasonal EWMA (default) | 5.04 | **5.89** | **9.31** |
-| Moving average (4) | 6.50 | 9.33 | 14.82 |
-| Seasonal naive | 8.16 | 8.19 | 15.81 |
-| *noise-free generator template (oracle)* | 3.01 | 3.01 | 4.66 |
-
-These results hold on **this synthetic dataset**, whose repeating daily template favours seasonal
-methods. They are not a general claim about which model is best. Full tables and limitations:
-[docs/forecasting.md](docs/forecasting.md).
-
-## 8. Contracts
-
-* Bid: [docs/bid_contract.md](docs/bid_contract.md): fields, units, invariants and their limits,
-  wire format, the `ClearingResult` reply, and the P1/P2 boundary.
-* Everything for P2, P3 and P4: [docs/integration_contract.md](docs/integration_contract.md), with
-  runnable code for each role.
-* Sample bids, offers and a clearing result: `data/sample/`.
-
-## 9. Testing
+## Testing
 
 ```bash
-pytest                                   # unit + integration + runnable doc examples
-pytest --cov=gridweave                   # coverage
-ruff check src tests scripts examples    # lint
+pytest                                     # 581 tests: unit, integration, claim tests, doc examples
+pytest --cov=gridweave                     # coverage
+ruff check src tests scripts examples      # lint
 ```
 
-The tests cover:
-- model validation, and the 15-minute grid (off-grid and missing slots rejected);
-- every forecaster, including on irregular input and held-out seeds;
-- load-classification boundaries, bid generation (including capacity), and supply/dispatch/clearing
-  contracts;
-- settlement against realised demand (allocation below, equal to and above actual; critical and
-  flexible shortfall; deferral, expiry and FIFO order), and an energy-conservation property on
-  random cases;
-- coordinator failure handling (over-allocation, duplicate or missing allocations, auction exceptions
-  and recovery, under-delivering sources);
-- closed-loop integration: forecast error reaches outcomes, allocation changes future state, deferred
-  load re-enters demand, rebound, battery SOC;
-- reproducibility, and runs with 10–100 buildings.
+Each claim in the design document has a named test ([DESIGN.md §12](docs/DESIGN.md#12-testing-table-review-2)).
+All randomness is seeded. CI runs on Python 3.10–3.13.
 
-All randomness is seeded. CI runs lint and tests on Python 3.10, 3.11, 3.12 and 3.13.
+## Documentation
 
-## 10. Integration guide for teammates
-
-**Start with [docs/integration_contract.md](docs/integration_contract.md).**
-
-* **P2 (market):** implement `clear(slot, bids, offers) -> ClearingResult` (allocations + dispatch).
-  Test against `data/sample/sample_bids.json` and `validate_clearing`.
-* **P3 (supply):** use `CampusSupplyProvider` from [docs/p3_integration.md](docs/p3_integration.md)
-  for production Grid, Solar and Battery offers, validated dispatch, accounting and events.
-* **P4 (coordinator):** drive `observe → generate_bid → offers → [revised bids] → clear → dispatch →
-  settle(allocation, realised) → apply_settlement`. `MockCoordinator` is the validated reference loop.
-
-## 11. Scalability (measured, not proven)
-
-The current sequential, single-process simulation loop was run with up to 500 building agents
-(`scripts/benchmark_scaling.py`). Runtime grew linearly (about 0.2 ms per agent per 15-minute
-cycle on an arm64 laptop, Python 3.13), and per-agent memory is bounded. There is no parallel or
-distributed execution. See [docs/architecture.md](docs/architecture.md#scalability-what-has-actually-been-measured).
-
-## 12. Known limitations
-
-* Demand data is **synthetic** (hand-designed timetables with AR(1) noise), not measured. It favours
-  seasonal forecasters.
-* Forecasters are statistical baselines. The agent's adaptation is an EWMA deprivation state and a
-  deferred-energy queue, not machine learning.
-* The coordinator and dashboard remain outside this repository's P3 scope. Supply profiles and
-  demand data are synthetic simulation assumptions, not measured campus data.
-* Critical-load protection is not guaranteed by P1 (see section 6).
-* Load classification is parametric (fractions plus an operational floor), not a per-appliance model.
-  Rebound is a single fraction, not a thermal model.
-* Forecast confidence is heuristic and unused in decisions. Spike detection only flags and counts.
+| Document | Covers |
+|---|---|
+| [DESIGN.md](docs/DESIGN.md) | **Everything, in one place.** Start here |
+| [building_agent.md](docs/building_agent.md), [demand_model.md](docs/demand_model.md), [forecasting.md](docs/forecasting.md) | P1 details |
+| [auction.md](docs/auction.md), [allocation_algorithms.md](docs/allocation_algorithms.md), [fairness.md](docs/fairness.md) | P2 details |
+| [energy_supply_architecture.md](docs/energy_supply_architecture.md), [battery_agent.md](docs/battery_agent.md) | P3 details |
+| [integration_contract.md](docs/integration_contract.md), [P1_FREEZE.md](docs/P1_FREEZE.md), [architecture.md](docs/architecture.md) | Contracts between workstreams |
 
 ## Repository layout
 
 ```
-src/gridweave/   core package (see table above)        data/sample/   committed synthetic samples
-tests/           unit/ + integration/                  docs/          architecture, agent, demand,
-examples/        runnable walkthroughs                                forecasting, bid + integration
-scripts/         simulation, experiment, benchmark,                   contracts, RescueSync note
-                 sample-data generation
+src/gridweave/   models/ interfaces contracts (shared) · agents/ forecasting/ bidding/ ... (P1)
+                 auction/ (P2) · supply/ (P3) · coordinator/ (P4) · mocks/ (test doubles)
+tests/           unit/ + integration/ (including test_claims.py)
+scripts/         simulation CLI, experiments, figures, benchmarks
+examples/        short demos per workstream
+docs/            DESIGN.md, per-component docs, figures/
 ```
 
 ## License
