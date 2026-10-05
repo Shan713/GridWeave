@@ -15,7 +15,7 @@
         "jains_fairness_index": 1.0,
         "total_cost": 325.0,
         "average_price": 10.0,
-        "runtime_ms": 0.19,
+        "runtime_ms": 0.506,
         "allocations_by_building": {
           "hostel_a": 35.0,
           "hostel_b": 30.0,
@@ -32,7 +32,7 @@
         "jains_fairness_index": 1.0,
         "total_cost": 325.0,
         "average_price": 10.0,
-        "runtime_ms": 0.121,
+        "runtime_ms": 0.163,
         "allocations_by_building": {
           "hostel_a": 35.0,
           "hostel_b": 30.0,
@@ -49,7 +49,7 @@
         "jains_fairness_index": 1.0,
         "total_cost": 325.0,
         "average_price": 10.0,
-        "runtime_ms": 0.136,
+        "runtime_ms": 0.188,
         "allocations_by_building": {
           "hostel_a": 35.0,
           "hostel_b": 30.0,
@@ -66,7 +66,7 @@
         "jains_fairness_index": 1.0,
         "total_cost": 325.0,
         "average_price": 10.0,
-        "runtime_ms": 0.125,
+        "runtime_ms": 0.16,
         "allocations_by_building": {
           "hostel_a": 35.0,
           "hostel_b": 30.0,
@@ -92,7 +92,7 @@
         "jains_fairness_index": 1.0,
         "total_cost": 250.0,
         "average_price": 10.0,
-        "runtime_ms": 0.094,
+        "runtime_ms": 0.113,
         "allocations_by_building": {
           "hostel_a": 26.92,
           "hostel_b": 23.08,
@@ -109,7 +109,7 @@
         "jains_fairness_index": 0.7463,
         "total_cost": 250.0,
         "average_price": 10.0,
-        "runtime_ms": 0.083,
+        "runtime_ms": 0.103,
         "allocations_by_building": {
           "hostel_a": 30.0,
           "hostel_b": 30.0,
@@ -126,7 +126,7 @@
         "jains_fairness_index": 0.9924,
         "total_cost": 250.0,
         "average_price": 10.0,
-        "runtime_ms": 0.127,
+        "runtime_ms": 0.131,
         "allocations_by_building": {
           "hostel_a": 25.0,
           "hostel_b": 22.0,
@@ -143,7 +143,7 @@
         "jains_fairness_index": 0.9924,
         "total_cost": 250.0,
         "average_price": 10.0,
-        "runtime_ms": 0.104,
+        "runtime_ms": 0.127,
         "allocations_by_building": {
           "hostel_a": 25.0,
           "hostel_b": 22.0,
@@ -169,7 +169,7 @@
         "jains_fairness_index": 1.0,
         "total_cost": 150.0,
         "average_price": 10.0,
-        "runtime_ms": 0.077,
+        "runtime_ms": 0.104,
         "allocations_by_building": {
           "hostel_a": 16.15,
           "hostel_b": 13.85,
@@ -186,7 +186,7 @@
         "jains_fairness_index": 0.4808,
         "total_cost": 150.0,
         "average_price": 10.0,
-        "runtime_ms": 0.071,
+        "runtime_ms": 0.235,
         "allocations_by_building": {
           "hostel_a": 0.0,
           "hostel_b": 20.0,
@@ -203,7 +203,7 @@
         "jains_fairness_index": 0.9662,
         "total_cost": 150.0,
         "average_price": 10.0,
-        "runtime_ms": 0.091,
+        "runtime_ms": 0.131,
         "allocations_by_building": {
           "hostel_a": 13.64,
           "hostel_b": 12.27,
@@ -220,7 +220,7 @@
         "jains_fairness_index": 0.9662,
         "total_cost": 150.0,
         "average_price": 10.0,
-        "runtime_ms": 0.089,
+        "runtime_ms": 0.134,
         "allocations_by_building": {
           "hostel_a": 13.64,
           "hostel_b": 12.27,
@@ -246,7 +246,7 @@
         "jains_fairness_index": 1.0,
         "total_cost": 212.5,
         "average_price": 10.0,
-        "runtime_ms": 0.092,
+        "runtime_ms": 0.11,
         "allocations_by_building": {
           "hostel_a": 22.88,
           "hostel_b": 19.62,
@@ -263,7 +263,7 @@
         "jains_fairness_index": 0.6752,
         "total_cost": 212.5,
         "average_price": 10.0,
-        "runtime_ms": 0.079,
+        "runtime_ms": 0.105,
         "allocations_by_building": {
           "hostel_a": 15.0,
           "hostel_b": 30.0,
@@ -280,7 +280,7 @@
         "jains_fairness_index": 0.9662,
         "total_cost": 212.5,
         "average_price": 10.0,
-        "runtime_ms": 0.101,
+        "runtime_ms": 0.125,
         "allocations_by_building": {
           "hostel_a": 19.32,
           "hostel_b": 17.39,
@@ -297,7 +297,7 @@
         "jains_fairness_index": 0.9662,
         "total_cost": 212.5,
         "average_price": 10.0,
-        "runtime_ms": 0.089,
+        "runtime_ms": 0.116,
         "allocations_by_building": {
           "hostel_a": 19.32,
           "hostel_b": 17.39,
@@ -323,7 +323,7 @@
         "jains_fairness_index": 1.0,
         "total_cost": 330.0,
         "average_price": 12.0,
-        "runtime_ms": 0.079,
+        "runtime_ms": 0.103,
         "allocations_by_building": {
           "hostel_a": 29.62,
           "hostel_b": 25.38,
@@ -340,7 +340,7 @@
         "jains_fairness_index": 0.8421,
         "total_cost": 330.0,
         "average_price": 12.0,
-        "runtime_ms": 0.08,
+        "runtime_ms": 0.103,
         "allocations_by_building": {
           "hostel_a": 35.0,
           "hostel_b": 30.0,
@@ -357,7 +357,7 @@
         "jains_fairness_index": 0.9791,
         "total_cost": 330.0,
         "average_price": 12.0,
-        "runtime_ms": 0.102,
+        "runtime_ms": 0.144,
         "allocations_by_building": {
           "hostel_a": 25.0,
           "hostel_b": 27.0,
@@ -374,7 +374,7 @@
         "jains_fairness_index": 0.9791,
         "total_cost": 330.0,
         "average_price": 12.0,
-        "runtime_ms": 0.103,
+        "runtime_ms": 0.129,
         "allocations_by_building": {
           "hostel_a": 25.0,
           "hostel_b": 27.0,
@@ -400,7 +400,7 @@
         "jains_fairness_index": 1.0,
         "total_cost": 250.0,
         "average_price": 10.0,
-        "runtime_ms": 0.076,
+        "runtime_ms": 0.099,
         "allocations_by_building": {
           "hostel_a": 26.92,
           "hostel_b": 23.08,
@@ -417,7 +417,7 @@
         "jains_fairness_index": 0.7463,
         "total_cost": 250.0,
         "average_price": 10.0,
-        "runtime_ms": 0.316,
+        "runtime_ms": 0.094,
         "allocations_by_building": {
           "hostel_a": 30.0,
           "hostel_b": 30.0,
@@ -434,7 +434,7 @@
         "jains_fairness_index": 0.9924,
         "total_cost": 250.0,
         "average_price": 10.0,
-        "runtime_ms": 0.106,
+        "runtime_ms": 0.119,
         "allocations_by_building": {
           "hostel_a": 25.0,
           "hostel_b": 22.0,
@@ -451,7 +451,7 @@
         "jains_fairness_index": 0.9924,
         "total_cost": 250.0,
         "average_price": 10.0,
-        "runtime_ms": 0.096,
+        "runtime_ms": 0.117,
         "allocations_by_building": {
           "hostel_a": 25.0,
           "hostel_b": 22.0,
@@ -477,7 +477,7 @@
         "jains_fairness_index": 1.0,
         "total_cost": 237.5,
         "average_price": 10.0,
-        "runtime_ms": 0.076,
+        "runtime_ms": 0.093,
         "allocations_by_building": {
           "hostel_a": 25.58,
           "hostel_b": 21.92,
@@ -494,7 +494,7 @@
         "jains_fairness_index": 0.7337,
         "total_cost": 237.5,
         "average_price": 10.0,
-        "runtime_ms": 0.074,
+        "runtime_ms": 0.092,
         "allocations_by_building": {
           "hostel_a": 25.0,
           "hostel_b": 30.0,
@@ -511,7 +511,7 @@
         "jains_fairness_index": 0.9845,
         "total_cost": 237.5,
         "average_price": 10.0,
-        "runtime_ms": 0.096,
+        "runtime_ms": 0.116,
         "allocations_by_building": {
           "hostel_a": 22.92,
           "hostel_b": 20.33,
@@ -528,7 +528,7 @@
         "jains_fairness_index": 0.9797,
         "total_cost": 237.5,
         "average_price": 10.0,
-        "runtime_ms": 0.091,
+        "runtime_ms": 0.11,
         "allocations_by_building": {
           "hostel_a": 23.0,
           "hostel_b": 22.0,
@@ -554,7 +554,7 @@
         "jains_fairness_index": 1.0,
         "total_cost": 200.0,
         "average_price": 10.0,
-        "runtime_ms": 0.077,
+        "runtime_ms": 0.1,
         "allocations_by_building": {
           "hostel_a": 22.05,
           "hostel_b": 18.9,
@@ -571,7 +571,7 @@
         "jains_fairness_index": 0.6576,
         "total_cost": 200.0,
         "average_price": 10.0,
-        "runtime_ms": 0.076,
+        "runtime_ms": 0.091,
         "allocations_by_building": {
           "hostel_a": 13.0,
           "hostel_b": 30.0,
@@ -588,7 +588,7 @@
         "jains_fairness_index": 0.9509,
         "total_cost": 200.0,
         "average_price": 10.0,
-        "runtime_ms": 0.094,
+        "runtime_ms": 0.112,
         "allocations_by_building": {
           "hostel_a": 18.18,
           "hostel_b": 16.36,
@@ -605,7 +605,7 @@
         "jains_fairness_index": 0.9509,
         "total_cost": 200.0,
         "average_price": 10.0,
-        "runtime_ms": 0.1,
+        "runtime_ms": 0.104,
         "allocations_by_building": {
           "hostel_a": 18.18,
           "hostel_b": 16.36,

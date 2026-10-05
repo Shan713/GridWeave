@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-28T23:09:02.360223",
+  "timestamp": "2026-10-01T01:21:31.398661",
   "workstream": "Person 3 \u2014 Energy Supply Intelligence",
   "experiment_1_solar_forecasting": {
     "clear_sky": {
@@ -134,7 +134,7 @@
       "solar_self_consumption_rate": 1.0,
       "battery_throughput_kwh": 0.0,
       "battery_cycles": 0.0,
-      "runtime_ms": 29.21,
+      "runtime_ms": 14.96,
       "final_soc": null
     },
     "grid_solar": {
@@ -151,7 +151,7 @@
       "solar_self_consumption_rate": 1.0,
       "battery_throughput_kwh": 0.0,
       "battery_cycles": 0.0,
-      "runtime_ms": 172.53,
+      "runtime_ms": 72.75,
       "final_soc": null
     },
     "grid_solar_rule_based_battery": {
@@ -168,7 +168,7 @@
       "solar_self_consumption_rate": 1.0,
       "battery_throughput_kwh": 78.375,
       "battery_cycles": 0.26125,
-      "runtime_ms": 136.53,
+      "runtime_ms": 103.43,
       "final_soc": 0.2
     },
     "grid_solar_forecast_aware_battery": {
@@ -185,7 +185,7 @@
       "solar_self_consumption_rate": 1.0,
       "battery_throughput_kwh": 78.375,
       "battery_cycles": 0.26125,
-      "runtime_ms": 186.79,
+      "runtime_ms": 89.9,
       "final_soc": 0.2
     }
   }
